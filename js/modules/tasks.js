@@ -45,7 +45,8 @@ const TasksModule = {
         if (!listContainer) return;
 
         try {
-            const result = await API.post('read', { sheet: 'Tasks' });
+            // WICHTIG: _t Parameter verhindert Caching durch den Browser
+            const result = await API.post('read', { sheet: 'Tasks', _t: new Date().getTime() });
             
             if (result.status === 'success') {
                 this.tasks = result.data.filter(t => t.status === 'open');
@@ -153,7 +154,8 @@ const TasksModule = {
     async loadRanking() {
         const list = document.getElementById('ranking-list');
         list.innerHTML = "Lade Highscore...";
-        const result = await API.post('get_ranking');
+        // Auch hier Cache Buster hinzufügen
+        const result = await API.post('get_ranking', { _t: new Date().getTime() });
         if (result.status === 'success') {
             list.innerHTML = "";
             if (result.data.length === 0) {
