@@ -15,6 +15,7 @@
     </header>
 
     <main id="app-container">
+        <!-- Login Screen -->
         <div id="login-screen">
             <h2>Willkommen</h2>
             <input type="text" id="login-name" placeholder="Dein Name">
@@ -24,6 +25,7 @@
         </div>
     </main>
 
+    <!-- Navigation -->
     <nav id="main-nav" style="display:none;">
         <button onclick="App.loadModule('dashboard')">
             <span>📅</span> Kalender
@@ -36,22 +38,19 @@
         </button>
     </nav>
 
+    <!-- Modal für Kalender -->
     <div id="event-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>Neuer Termin</h3>
-            
             <label>Titel</label>
             <input type="text" id="evt-title" placeholder="Was steht an?">
-            
             <label>Datum</label>
             <input type="date" id="evt-date">
-            
             <label>Kategorie</label>
             <select id="evt-type">
                 <option value="general">Allgemein</option>
                 <option value="party">Party / Besuch</option>
             </select>
-
             <label>Wiederholung</label>
             <select id="evt-recurrence">
                 <option value="none">Einmalig</option>
@@ -59,7 +58,6 @@
                 <option value="monthly">Monatlich</option>
                 <option value="yearly">Jährlich</option>
             </select>
-
             <div class="modal-actions">
                 <button onclick="document.getElementById('event-modal').style.display='none'">Abbr.</button>
                 <button class="primary" onclick="CalendarModule.saveEvent()">Speichern</button>
@@ -67,12 +65,11 @@
         </div>
     </div>
 
+    <!-- SCRIPTS -->
     <script src="js/api.js"></script>
-    
     <script src="js/modules/calendar.js"></script>
     <script src="js/modules/shopping.js"></script>
     <script src="js/modules/tasks.js"></script>
-    
     <script src="js/main.js"></script>
 
 </body>
