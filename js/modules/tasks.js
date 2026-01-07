@@ -3,7 +3,6 @@ const TasksModule = {
 
     async init() {
         const container = document.getElementById('app-container');
-        // Admin darf Punkte vergeben
         const isAdmin = App.user.role === 'Admin' || App.user.role === 'admin';
         const pointsHtml = isAdmin ? `<input type="number" id="task-points" placeholder="Pkt" value="10" style="width:60px;">` : ``;
 
@@ -37,7 +36,6 @@ const TasksModule = {
                 <div id="ranking-list" class="list-container"></div>
             </div>
         `;
-
         await this.loadTasks();
     },
 
@@ -46,6 +44,8 @@ const TasksModule = {
         if (result.status === 'success') {
             this.tasks = result.data.filter(t => t.status === 'open');
             this.render('todo');
+        } else {
+            document.getElementById('task-list').innerHTML = "Fehler: " + result.message;
         }
     },
 
@@ -64,14 +64,7 @@ const TasksModule = {
     render(filterType) {
         const list = document.getElementById('task-list');
         list.innerHTML = "";
-
-        let filtered = [];
-        if (filterType === 'cleaning') {
-            filtered = this.tasks.filter(t => t.type === 'cleaning');
-        } else {
-            // Bei "ToDo" zeigen wir alles (auch Putzen und Einkaufen)
-            filtered = this.tasks;
-        }
+        let filtered = (filterType === 'cleaning') ? this.tasks.filter(t => t.type === 'cleaning') : this.tasks;
 
         if (filtered.length === 0) {
             list.innerHTML = "<p class='empty-msg' style='text-align:center;'>Nichts zu tun!</p>";
@@ -79,19 +72,12 @@ const TasksModule = {
         }
 
         filtered.forEach(task => {
-            let icon = '📌';
-            if(task.type === 'cleaning') icon = '🧹';
-            if(task.type === 'shopping') icon = '🛒';
-
+            let icon = task.type === 'cleaning' ? '🧹' : (task.type === 'shopping' ? '🛒' : '📌');
             list.innerHTML += `
                 <div class="list-item task-item">
-                    <div class="task-info">
-                        <strong>${icon} ${task.title}</strong>
-                        <small>Bis: ${task.date} | ${task.points} Pkt</small>
-                    </div>
+                    <div class="task-info"><strong>${icon} ${task.title}</strong><small>${task.date} | ${task.points} Pkt</small></div>
                     <button class="check-btn" onclick="TasksModule.completeTask('${task.id}')">✔</button>
-                </div>
-            `;
+                </div>`;
         });
     },
 
@@ -102,32 +88,17 @@ const TasksModule = {
         const recur = document.getElementById('task-recurrence').value;
         const ptsInput = document.getElementById('task-points');
         const points = ptsInput ? ptsInput.value : 10;
-
         if(!title) return;
 
-        const payload = {
-            title: title,
-            date: date || new Date().toISOString().split('T')[0],
-            type: type,
-            points: points,
-            status: "open",
-            recurrence: recur
-        };
-
-        await API.post('create', { sheet: 'Tasks', payload: JSON.stringify(payload) });
+        await API.post('create', { sheet: 'Tasks', payload: JSON.stringify({title, date, type, points, status: "open", recurrence: recur}) });
         document.getElementById('task-title').value = "";
         await this.loadTasks();
         this.render(type === 'cleaning' ? 'cleaning' : 'todo');
     },
 
     async completeTask(id) {
-        if(!confirm("Aufgabe erledigt? Punkte werden gutgeschrieben!")) return;
-        await API.post('update', { 
-            sheet: 'Tasks', 
-            id: id, 
-            updates: JSON.stringify({ status: 'done' }),
-            user: App.user.name 
-        });
+        if(!confirm("Erledigt?")) return;
+        await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
         await this.loadTasks();
         this.render('todo');
     },
@@ -140,11 +111,7 @@ const TasksModule = {
             list.innerHTML = "";
             result.data.forEach((entry, idx) => {
                 let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : ''));
-                list.innerHTML += `
-                    <div class="list-item">
-                        <span>${medal} <strong>${entry.name}</strong></span>
-                        <span class="points-badge">${entry.points} Pkt</span>
-                    </div>`;
+                list.innerHTML += `<div class="list-item"><span>${medal} <strong>${entry.name}</strong></span><span class="points-badge">${entry.points} Pkt</span></div>`;
             });
         }
     }
