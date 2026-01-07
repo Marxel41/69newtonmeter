@@ -40,12 +40,22 @@ const TasksModule = {
     },
 
     async loadTasks() {
-        const result = await API.post('read', { sheet: 'Tasks' });
-        if (result.status === 'success') {
-            this.tasks = result.data.filter(t => t.status === 'open');
-            this.render('todo');
-        } else {
-            document.getElementById('task-list').innerHTML = "Fehler: " + result.message;
+        const listContainer = document.getElementById('task-list');
+        // Sicherheitscheck, falls der User schnell den Tab gewechselt hat
+        if (!listContainer) return;
+
+        try {
+            const result = await API.post('read', { sheet: 'Tasks' });
+            
+            if (result.status === 'success') {
+                this.tasks = result.data.filter(t => t.status === 'open');
+                this.render('todo');
+            } else {
+                listContainer.innerHTML = `<p style="color:red; text-align:center;">Fehler beim Laden:<br>${result.message}</p>`;
+                console.error("Ladefehler:", result);
+            }
+        } catch (e) {
+            listContainer.innerHTML = `<p style="color:red; text-align:center;">Kritischer Fehler:<br>${e.toString()}</p>`;
         }
     },
 
@@ -63,11 +73,13 @@ const TasksModule = {
 
     render(filterType) {
         const list = document.getElementById('task-list');
+        if (!list) return;
+        
         list.innerHTML = "";
         let filtered = (filterType === 'cleaning') ? this.tasks.filter(t => t.type === 'cleaning') : this.tasks;
 
         if (filtered.length === 0) {
-            list.innerHTML = "<p class='empty-msg' style='text-align:center;'>Nichts zu tun!</p>";
+            list.innerHTML = "<p class='empty-msg' style='text-align:center; padding: 20px; color: #888;'>Nichts zu tun! 🎉</p>";
             return;
         }
 
@@ -82,37 +94,78 @@ const TasksModule = {
     },
 
     async addTask() {
-        const title = document.getElementById('task-title').value;
-        const date = document.getElementById('task-date').value;
+        const titleInput = document.getElementById('task-title');
+        const title = titleInput.value;
+        const dateInput = document.getElementById('task-date');
+        // Wenn kein Datum gewählt, nimm heute
+        const date = dateInput.value || new Date().toISOString().split('T')[0];
+        
         const type = document.getElementById('task-type').value;
         const recur = document.getElementById('task-recurrence').value;
         const ptsInput = document.getElementById('task-points');
         const points = ptsInput ? ptsInput.value : 10;
-        if(!title) return;
+        
+        if(!title) {
+            alert("Bitte gib einen Titel für die Aufgabe ein.");
+            return;
+        }
 
-        await API.post('create', { sheet: 'Tasks', payload: JSON.stringify({title, date, type, points, status: "open", recurrence: recur}) });
-        document.getElementById('task-title').value = "";
-        await this.loadTasks();
-        this.render(type === 'cleaning' ? 'cleaning' : 'todo');
+        // Visuelles Feedback: Button deaktivieren & Ladesymbol
+        const btn = document.querySelector('#task-view button.primary');
+        const oldText = btn.innerText;
+        btn.innerText = "⏳";
+        btn.disabled = true;
+
+        const payload = {title, date, type, points, status: "open", recurrence: recur};
+        
+        // Sende Anfrage
+        const result = await API.post('create', { sheet: 'Tasks', payload: JSON.stringify(payload) });
+
+        // Button zurücksetzen
+        btn.innerText = oldText;
+        btn.disabled = false;
+
+        if (result.status === 'success') {
+            titleInput.value = "";
+            // Neu laden um den neuen Eintrag zu sehen
+            await this.loadTasks();
+            this.render(type === 'cleaning' ? 'cleaning' : 'todo');
+        } else {
+            // FEHLER ANZEIGEN!
+            alert("Fehler beim Speichern:\n" + (result.message || "Unbekannter Fehler"));
+        }
     },
 
     async completeTask(id) {
-        if(!confirm("Erledigt?")) return;
-        await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
-        await this.loadTasks();
-        this.render('todo');
+        if(!confirm("Aufgabe erledigt? Punkte werden gutgeschrieben!")) return;
+        
+        // Button Feedback nicht so wichtig hier, da Zeile gleich verschwindet
+        const result = await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
+        
+        if (result.status === 'success') {
+            await this.loadTasks();
+            this.render('todo');
+        } else {
+            alert("Konnte Status nicht ändern: " + result.message);
+        }
     },
 
     async loadRanking() {
         const list = document.getElementById('ranking-list');
-        list.innerHTML = "Lade...";
+        list.innerHTML = "Lade Highscore...";
         const result = await API.post('get_ranking');
         if (result.status === 'success') {
             list.innerHTML = "";
+            if (result.data.length === 0) {
+                 list.innerHTML = "<p style='text-align:center;'>Noch keine Punkte vergeben.</p>";
+                 return;
+            }
             result.data.forEach((entry, idx) => {
                 let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : ''));
                 list.innerHTML += `<div class="list-item"><span>${medal} <strong>${entry.name}</strong></span><span class="points-badge">${entry.points} Pkt</span></div>`;
             });
+        } else {
+            list.innerHTML = "Fehler beim Laden des Rankings.";
         }
     }
 };
