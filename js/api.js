@@ -1,19 +1,18 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbx0wBCPaz0zcLrXPlHNOnVt-rYcdX8suwCVA1AlsUCo4pun7lHkGJzdJKH74aErsADB9A/exec";
+// HIER DEINE URL EINFÜGEN!
+const API_URL = "DEINE_GOOGLE_SCRIPT_WEB_APP_URL_HIER_EINFÜGEN";
 
 const API = {
     async post(action, data = {}) {
-        // Da Google Apps Script POST Requests mit CORS schwierig sind, 
-        // nutzen wir oft GET für einfache Abfragen oder einen POST-Workaround.
-        // Für den Anfang nutzen wir simple URL Parameter via fetch.
-        
         const params = new URLSearchParams({ ...data, action: action });
-        
         try {
+            console.log(`API Anfrage: ${action}`);
             const response = await fetch(`${API_URL}?${params.toString()}`);
-            return await response.json();
+            if (!response.ok) throw new Error("Netzwerk Antwort war nicht ok");
+            const json = await response.json();
+            return json;
         } catch (error) {
             console.error("API Fehler:", error);
-            return { status: "error", message: "Verbindungsfehler" };
+            return { status: "error", message: "Verbindungsfehler: " + error.message };
         }
     }
 };
