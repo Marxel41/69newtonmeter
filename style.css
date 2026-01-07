@@ -1,215 +1,34 @@
-/* style.css - Kompletter Inhalt */
+/* ... bestehender Code ... */
 
-/* Generelles Layout */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f4f4f9;
-    color: #333;
-    margin: 0;
-    padding-bottom: 80px; /* Platz für Navbar */
+/* NEU: Styles für Listen & Shopping */
+.list-container { margin-top: 15px; }
+.list-item { 
+    background: white; border-bottom: 1px solid #eee; padding: 15px; 
+    display: flex; justify-content: space-between; align-items: center; 
+}
+.list-item:first-child { border-top-left-radius: 8px; border-top-right-radius: 8px; }
+.list-item:last-child { border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-bottom: none; }
+
+.task-info { display: flex; flex-direction: column; }
+.task-info small { color: #888; margin-top: 2px; }
+
+.check-btn { 
+    background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; 
+    border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer;
+}
+.add-box { 
+    background: white; padding: 15px; border-radius: 8px; 
+    display: flex; flex-wrap: wrap; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 10px;
 }
 
-header {
-    background: #6200ea;
-    color: white;
-    padding: 1rem;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+/* Tabs */
+.tabs { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom:5px;}
+.tabs button { 
+    background: #fff; border: 1px solid #ddd; padding: 8px 15px; border-radius: 20px; white-space: nowrap; cursor: pointer;
 }
+.tabs button:hover { background: #eee; }
 
-/* Navigation unten */
-nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background: white;
-    border-top: 1px solid #ddd;
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-    z-index: 100;
-}
-
-nav button {
-    background: none;
-    border: none;
-    font-size: 1rem;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: #555;
-}
-
-/* Login Screen */
-#login-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 50px 20px;
-    gap: 15px;
-}
-
-input, select {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-    width: 100%;
-    box-sizing: border-box; /* Damit Padding nicht die Breite sprengt */
-}
-
-button {
-    cursor: pointer;
-}
-
-/* Kalender Header */
-.cal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    background: white;
-    border-bottom: 1px solid #eee;
-}
-
-.cal-header h2 {
-    margin: 0;
-    font-size: 1.2rem;
-}
-
-.cal-header button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #6200ea;
-}
-
-/* Kalender Grid */
-.cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
-    padding: 10px;
-    background: white;
-}
-
-.day-name {
-    text-align: center;
-    font-weight: bold;
-    color: #888;
-    font-size: 0.8rem;
-    padding-bottom: 5px;
-}
-
-.cal-day {
-    aspect-ratio: 1/1;
-    border-radius: 8px;
-    background: #f9f9f9;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 5px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-.cal-day.today {
-    background: #e8eaf6;
-    border: 1px solid #6200ea;
-    font-weight: bold;
-    color: #6200ea;
-}
-
-/* Event Punkte */
-.dots {
-    display: flex;
-    gap: 2px;
-    margin-top: 4px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    display: block;
-}
-
-.dot-green { background-color: #00c853; } /* Allgemein */
-.dot-blue { background-color: #2962ff; } /* Putzen */
-.dot-red { background-color: #d50000; } /* Müll */
-.dot-purple { background-color: #9c27b0; } /* Party */
-
-/* Floating Action Button (+) */
-.fab {
-    position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: #6200ea;
-    color: white;
-    border: none;
-    font-size: 2rem;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 90;
-}
-
-/* Modal (Popups) */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 85%;
-    max-width: 350px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.modal-content h3 {
-    margin-top: 0;
-}
-
-.modal-content label {
-    font-size: 0.85rem;
-    font-weight: bold;
-    color: #666;
-    margin-bottom: -5px;
-}
-
-.modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 10px;
-}
-
-button.primary {
-    background: #6200ea;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
+/* Ranking Badges */
+.points-badge { 
+    background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; 
 }
