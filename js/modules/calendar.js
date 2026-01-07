@@ -20,17 +20,16 @@ const CalendarModule = {
     },
 
     async loadEvents() {
-        // 1. Events vom Sheet "Events" laden (Parties etc.)
+        // Lade Events UND Tasks
         const resEvents = await API.post('read', { sheet: 'Events' });
-        // 2. Tasks vom Sheet "Tasks" laden (Putzplan etc.)
         const resTasks = await API.post('read', { sheet: 'Tasks' });
         
         this.events = [];
         if (resEvents.status === 'success') this.events = this.events.concat(resEvents.data);
         if (resTasks.status === 'success') {
-            // Nur offene Tasks im Kalender anzeigen
-            const tasks = resTasks.data.filter(t => t.status === 'open');
-            this.events = this.events.concat(tasks);
+            // Nur offene Tasks
+            const activeTasks = resTasks.data.filter(t => t.status === 'open');
+            this.events = this.events.concat(activeTasks);
         }
     },
 
@@ -40,7 +39,7 @@ const CalendarModule = {
         const year = this.currentDate.getFullYear();
         const month = this.currentDate.getMonth();
         
-        const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+        const monthNames = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
         monthLabel.innerText = `${monthNames[month]} ${year}`;
         grid.innerHTML = "";
 
@@ -60,19 +59,16 @@ const CalendarModule = {
             daysEvents.forEach(e => {
                 let color = 'dot-green';
                 if(e.type === 'cleaning') color = 'dot-blue';
-                if(e.type === 'shopping') color = 'dot-red'; // Einkaufen rot
+                if(e.type === 'shopping') color = 'dot-red';
                 if(e.type === 'party') color = 'dot-purple';
                 eventDots += `<span class="dot ${color}"></span>`;
             });
 
             const isToday = new Date().toISOString().split('T')[0] === dateStr ? 'today' : '';
             const titles = daysEvents.map(e => "• " + e.title).join("\\n");
+            const clickAction = daysEvents.length > 0 ? `alert('${titles}')` : '';
 
-            grid.innerHTML += `
-                <div class="cal-day ${isToday}" onclick="alert('${titles || "Leer"}')">
-                    <span>${i}</span>
-                    <div class="dots">${eventDots}</div>
-                </div>`;
+            grid.innerHTML += `<div class="cal-day ${isToday}" onclick="${clickAction}"><span>${i}</span><div class="dots">${eventDots}</div></div>`;
         }
     },
 
@@ -81,10 +77,8 @@ const CalendarModule = {
             if (!e.recurrence || e.recurrence === 'none') return e.date && e.date.startsWith(dateStr);
             const start = new Date(e.date);
             if (dateObj < start) return false;
-            
             const dObj = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
             const sDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-
             if (e.recurrence === 'weekly') return dObj.getDay() === sDate.getDay();
             if (e.recurrence === 'monthly') return dObj.getDate() === sDate.getDate();
             if (e.recurrence === 'yearly') return dObj.getDate() === sDate.getDate() && dObj.getMonth() === sDate.getMonth();
@@ -92,23 +86,15 @@ const CalendarModule = {
         });
     },
     changeMonth(step) { this.currentDate.setMonth(this.currentDate.getMonth() + step); this.render(); },
-    showAddModal() { 
-        document.getElementById('event-modal').style.display = 'flex'; 
-        document.getElementById('evt-date').valueAsDate = new Date();
-    },
-    // saveEvent Funktion nutzen wir hier weiter aus der vorherigen Version, 
-    // aber eigentlich nutzen wir jetzt TasksModule für Aufgaben. 
-    // Wir lassen die Funktion hier für "reine" Kalender-Events (Partys).
+    showAddModal() { document.getElementById('event-modal').style.display = 'flex'; document.getElementById('evt-date').valueAsDate = new Date(); },
     async saveEvent() {
-        // ... (Logik wie vorher, oder vereinfacht nur für Events)
-        // Um Konflikte zu vermeiden: Einfach das Modal in index.html nutzen.
         const title = document.getElementById('evt-title').value;
         const date = document.getElementById('evt-date').value;
         const type = document.getElementById('evt-type').value;
         const recur = document.getElementById('evt-recurrence').value;
+        if(!title) return;
         
-        const payload = { title, date, type, recurrence: recur, author: App.user.name };
-        await API.post('create', { sheet: 'Events', payload: JSON.stringify(payload) });
+        await API.post('create', { sheet: 'Events', payload: JSON.stringify({title, date, type, recurrence: recur, author: App.user.name}) });
         document.getElementById('event-modal').style.display = 'none';
         await this.loadEvents();
         this.render();
