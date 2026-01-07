@@ -2,18 +2,23 @@ const App = {
     user: null,
 
     init() {
-        console.log("App gestartet");
+        console.log("App initialisiert");
 
-        // Service Worker für spätere App-Installation
+        // Service Worker registrieren (wenn vorhanden)
         if ('serviceWorker' in navigator) {
-            // navigator.serviceWorker.register('sw.js'); // Erst aktivieren, wenn wir sw.js haben
+            // navigator.serviceWorker.register('sw.js');
         }
         
-        // Prüfen, ob der User schon eingeloggt war (im Speicher des Browsers)
+        // Auto-Login prüfen
         const savedUser = localStorage.getItem('wg_user');
         if (savedUser) {
-            this.user = JSON.parse(savedUser);
-            this.showInterface();
+            try {
+                this.user = JSON.parse(savedUser);
+                this.showInterface();
+            } catch (e) {
+                console.error("User Daten defekt", e);
+                localStorage.removeItem('wg_user');
+            }
         }
     },
 
@@ -22,79 +27,71 @@ const App = {
         const pinInput = document.getElementById('login-pin');
         const msg = document.getElementById('login-msg');
 
-        const name = nameInput.value;
-        const pin = pinInput.value;
+        const name = nameInput.value.trim();
+        const pin = pinInput.value.trim();
 
         if (!name || !pin) {
             msg.textContent = "Bitte Name und PIN eingeben.";
             return;
         }
 
-        msg.textContent = "Lade...";
-        msg.style.color = "#666";
-
-        // Anfrage an Google Sheet
+        msg.textContent = "Verbinde...";
+        
         const result = await API.post('login', { name, pin });
 
         if (result.status === 'success') {
-            // Erfolgreich eingeloggt
             this.user = { name: result.user, role: result.role };
-            // User im Browser speichern, damit man nicht jedes Mal neu einloggen muss
             localStorage.setItem('wg_user', JSON.stringify(this.user));
             
             msg.textContent = "";
             this.showInterface();
         } else {
-            // Fehler
-            msg.style.color = "red";
-            msg.textContent = result.message || "Falsche Daten";
+            msg.textContent = result.message || "Login fehlgeschlagen.";
         }
     },
 
     showInterface() {
-        // Login ausblenden
+        // Login Screen ausblenden
         document.getElementById('login-screen').style.display = 'none';
         
         // Navigation einblenden
         document.getElementById('main-nav').style.display = 'flex';
         
-        // User Info Header
+        // Header Info
         const userInfo = document.getElementById('user-info');
-        userInfo.textContent = `Hallo, ${this.user.name}`;
+        userInfo.textContent = `Hallo, ${this.user.name} (${this.user.role})`;
         userInfo.style.display = 'block';
         
-        // Standardmäßig das Dashboard (Kalender) laden
+        // Start-Modul laden (Dashboard/Kalender)
         this.loadModule('dashboard');
     },
 
     loadModule(moduleName) {
-        const container = document.getElementById('app-container');
+        // Navigation Buttons optisch (optional könnte man hier 'active' Klassen setzen)
         
-        // Hier entscheiden wir, welches Modul geladen wird
         if(moduleName === 'dashboard') {
-            // Wir prüfen sicherheitshalber, ob das Modul geladen ist
+            // Lädt das Kalender Modul
             if (typeof CalendarModule !== 'undefined') {
                 CalendarModule.init();
-            } else {
-                container.innerHTML = "<p>Fehler: Kalender-Modul nicht gefunden.</p>";
             }
         } 
         else if (moduleName === 'cleaning') {
-             container.innerHTML = `
-                <div style="padding: 20px; text-align: center;">
-                    <h3>Putzplan</h3>
-                    <p>Dieses Modul kommt als nächstes!</p>
-                </div>`;
+             // Lädt das Tasks Modul und wechselt zum Putz-Tab
+             if (typeof TasksModule !== 'undefined') {
+                 TasksModule.init().then(() => {
+                     // Kleiner Timeout damit das DOM sicher bereit ist
+                     setTimeout(() => TasksModule.switchTab('cleaning'), 50);
+                 });
+             }
         } 
         else if (moduleName === 'shopping') {
-            container.innerHTML = `
-                <div style="padding: 20px; text-align: center;">
-                    <h3>Einkaufsliste</h3>
-                    <p>Noch nicht implementiert.</p>
-                </div>`;
+            // Lädt das Shopping Modul
+            if (typeof ShoppingModule !== 'undefined') {
+                ShoppingModule.init();
+            }
         }
     }
 };
 
-// Startet die App, sobald die Seite geladen ist
+// Startet die App
 document.addEventListener('DOMContentLoaded', () => App.init());
