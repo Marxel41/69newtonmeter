@@ -1,173 +1,188 @@
 const TasksModule = {
     tasks: [],
+    clickTimer: {}, // Speichert Timer für Doppelklicks
 
-    async init() {
-        const container = document.getElementById('app-container');
+    // Init für ToDos und Putzplan
+    async init(type, containerId) {
+        const container = document.getElementById(containerId);
+        
+        // Admin Punkte Input
         const isAdmin = App.user.role === 'Admin' || App.user.role === 'admin';
-        const pointsHtml = isAdmin ? `<input type="number" id="task-points" placeholder="Pkt" value="10" style="width:60px;">` : ``;
+        const pointsHtml = isAdmin ? `<input type="number" id="t-points" placeholder="Pt" value="${type==='cleaning'?20:10}" style="width:50px;">` : ``;
 
-        container.innerHTML = `
-            <div class="tabs">
-                <button onclick="TasksModule.switchTab('todo')">To-Dos</button>
-                <button onclick="TasksModule.switchTab('cleaning')">Putzplan</button>
-                <button onclick="TasksModule.switchTab('ranking')">🏆 Ranking</button>
-            </div>
-
-            <div id="task-view">
-                <div class="add-box">
-                    <input type="text" id="task-title" placeholder="Aufgabe...">
-                    <input type="date" id="task-date">
-                    ${pointsHtml}
-                    <select id="task-type">
-                        <option value="general">Allgemein</option>
-                        <option value="cleaning">Putzen</option>
-                    </select>
-                    <select id="task-recurrence">
+        // Unterscheidung der Eingabemaske
+        let addHtml = '';
+        if (type === 'todo' || type === 'cleaning') {
+            addHtml = `
+                <div class="add-box" style="background:var(--card-bg); padding:15px; border-radius:10px; margin-bottom:20px;">
+                    <input type="text" id="t-title" placeholder="Neue Aufgabe...">
+                    <div style="display:flex; gap:5px;">
+                        <input type="date" id="t-date">
+                        ${pointsHtml}
+                    </div>
+                    <select id="t-recurrence">
                         <option value="">Einmalig</option>
                         <option value="weekly">Wöchentlich</option>
                     </select>
-                    <button class="primary" onclick="TasksModule.addTask()">+</button>
+                    <button class="primary" onclick="TasksModule.addTask('${type}')">+</button>
                 </div>
-                <div id="task-list" class="list-container">Lade...</div>
-            </div>
-
-            <div id="ranking-view" style="display:none;">
-                <h3 style="text-align:center; margin-top:20px;">Monats-Champions</h3>
-                <div id="ranking-list" class="list-container"></div>
-            </div>
-        `;
-        await this.loadTasks();
-    },
-
-    async loadTasks() {
-        const listContainer = document.getElementById('task-list');
-        // Sicherheitscheck, falls der User schnell den Tab gewechselt hat
-        if (!listContainer) return;
-
-        try {
-            // WICHTIG: _t Parameter verhindert Caching durch den Browser
-            const result = await API.post('read', { sheet: 'Tasks', _t: new Date().getTime() });
-            
-            if (result.status === 'success') {
-                this.tasks = result.data.filter(t => t.status === 'open');
-                this.render('todo');
-            } else {
-                listContainer.innerHTML = `<p style="color:red; text-align:center;">Fehler beim Laden:<br>${result.message}</p>`;
-                console.error("Ladefehler:", result);
-            }
-        } catch (e) {
-            listContainer.innerHTML = `<p style="color:red; text-align:center;">Kritischer Fehler:<br>${e.toString()}</p>`;
+            `;
         }
+
+        container.innerHTML = `${addHtml}<div id="actual-list">Lade...</div>`;
+        await this.loadTasks(type);
     },
 
-    switchTab(tab) {
-        if(tab === 'ranking') {
-            document.getElementById('task-view').style.display = 'none';
-            document.getElementById('ranking-view').style.display = 'block';
-            this.loadRanking();
+    // Init nur für Ranking
+    async initRanking(containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = `<div id="ranking-list">Lade...</div>`;
+        await this.loadRanking();
+    },
+
+    async loadTasks(filterType) {
+        const listDiv = document.getElementById('actual-list');
+        if(!listDiv) return;
+
+        const result = await API.post('read', { sheet: 'Tasks', _t: new Date().getTime() });
+        if (result.status === 'success') {
+            this.tasks = result.data.filter(t => t.status === 'open');
+            this.render(filterType);
         } else {
-            document.getElementById('task-view').style.display = 'block';
-            document.getElementById('ranking-view').style.display = 'none';
-            this.render(tab);
+            listDiv.innerHTML = "Fehler beim Laden.";
         }
     },
 
     render(filterType) {
-        const list = document.getElementById('task-list');
-        if (!list) return;
+        const listDiv = document.getElementById('actual-list');
+        listDiv.innerHTML = "";
         
-        list.innerHTML = "";
-        let filtered = (filterType === 'cleaning') ? this.tasks.filter(t => t.type === 'cleaning') : this.tasks;
+        const filtered = this.tasks.filter(t => {
+            if(filterType === 'cleaning') return t.type === 'cleaning';
+            if(filterType === 'todo') return t.type !== 'cleaning' && t.type !== 'shopping';
+            return true;
+        });
 
-        if (filtered.length === 0) {
-            list.innerHTML = "<p class='empty-msg' style='text-align:center; padding: 20px; color: #888;'>Nichts zu tun! 🎉</p>";
-            return;
+        if(filtered.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; color:var(--text-muted);'>Nichts offen.</p>"; return;
         }
 
         filtered.forEach(task => {
-            let icon = task.type === 'cleaning' ? '🧹' : (task.type === 'shopping' ? '🛒' : '📌');
-            list.innerHTML += `
-                <div class="list-item task-item">
-                    <div class="task-info"><strong>${icon} ${task.title}</strong><small>${task.date} | ${task.points} Pkt</small></div>
-                    <button class="check-btn" onclick="TasksModule.completeTask('${task.id}')">✔</button>
-                </div>`;
+            listDiv.innerHTML += `
+                <div class="list-item">
+                    <div class="task-info">
+                        <strong>${task.title}</strong>
+                        <small style="color:var(--text-muted)">${task.date} • ${task.points} Pkt</small>
+                    </div>
+                    <!-- Der magische Button -->
+                    <button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>
+                </div>
+            `;
         });
     },
 
-    async addTask() {
-        const titleInput = document.getElementById('task-title');
-        const title = titleInput.value;
-        const dateInput = document.getElementById('task-date');
-        // Wenn kein Datum gewählt, nimm heute
-        const date = dateInput.value || new Date().toISOString().split('T')[0];
+    // Die Doppelklick-Logik
+    handleCheck(id) {
+        const btn = document.getElementById(`btn-${id}`);
         
-        const type = document.getElementById('task-type').value;
-        const recur = document.getElementById('task-recurrence').value;
-        const ptsInput = document.getElementById('task-points');
-        const points = ptsInput ? ptsInput.value : 10;
-        
-        if(!title) {
-            alert("Bitte gib einen Titel für die Aufgabe ein.");
-            return;
-        }
-
-        // Visuelles Feedback: Button deaktivieren & Ladesymbol
-        const btn = document.querySelector('#task-view button.primary');
-        const oldText = btn.innerText;
-        btn.innerText = "⏳";
-        btn.disabled = true;
-
-        const payload = {title, date, type, points, status: "open", recurrence: recur};
-        
-        // Sende Anfrage
-        const result = await API.post('create', { sheet: 'Tasks', payload: JSON.stringify(payload) });
-
-        // Button zurücksetzen
-        btn.innerText = oldText;
-        btn.disabled = false;
-
-        if (result.status === 'success') {
-            titleInput.value = "";
-            // Neu laden um den neuen Eintrag zu sehen
-            await this.loadTasks();
-            this.render(type === 'cleaning' ? 'cleaning' : 'todo');
+        // Wenn schon im Bestätigungs-Modus (Timer läuft)
+        if (this.clickTimer[id]) {
+            // ZWEITER KLICK -> Erledigen
+            clearTimeout(this.clickTimer[id]);
+            delete this.clickTimer[id];
+            this.completeTask(id);
         } else {
-            // FEHLER ANZEIGEN!
-            alert("Fehler beim Speichern:\n" + (result.message || "Unbekannter Fehler"));
+            // ERSTER KLICK -> Icon ändern
+            btn.classList.add('confirm-mode');
+            btn.innerHTML = "?"; // Oder Icon
+            
+            // Timer starten (2 Sekunden)
+            this.clickTimer[id] = setTimeout(() => {
+                // Reset wenn nicht nochmal geklickt
+                btn.classList.remove('confirm-mode');
+                btn.innerHTML = "✔";
+                delete TasksModule.clickTimer[id];
+            }, 2000);
         }
+    },
+
+    async addTask(type) {
+        const title = document.getElementById('t-title').value;
+        const date = document.getElementById('t-date').value || new Date().toISOString().split('T')[0];
+        const recur = document.getElementById('t-recurrence').value;
+        const ptsInput = document.getElementById('t-points');
+        const points = ptsInput ? ptsInput.value : (type==='cleaning'?20:10);
+
+        if(!title) return;
+        
+        // Task Typ setzen (Wenn wir im Putzplan Tab sind, ist es cleaning)
+        const finalType = type === 'cleaning' ? 'cleaning' : 'general';
+
+        await API.post('create', { sheet: 'Tasks', payload: JSON.stringify({
+            title, date, type: finalType, points, status: "open", recurrence: recur
+        })});
+        
+        document.getElementById('t-title').value = "";
+        await this.loadTasks(type);
     },
 
     async completeTask(id) {
-        if(!confirm("Aufgabe erledigt? Punkte werden gutgeschrieben!")) return;
-        
-        // Button Feedback nicht so wichtig hier, da Zeile gleich verschwindet
-        const result = await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
-        
-        if (result.status === 'success') {
-            await this.loadTasks();
-            this.render('todo');
-        } else {
-            alert("Konnte Status nicht ändern: " + result.message);
-        }
+        // Feedback: Zeile ausblenden
+        const btn = document.getElementById(`btn-${id}`);
+        if(btn) btn.parentElement.style.opacity = '0.3';
+
+        await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
+        // Wir laden neu, basierend auf dem aktuellen Tab (etwas hacky, aber geht)
+        const isCleaning = document.querySelector('h2').innerText.includes('Putzplan');
+        await this.loadTasks(isCleaning ? 'cleaning' : 'todo');
     },
 
     async loadRanking() {
-        const list = document.getElementById('ranking-list');
-        list.innerHTML = "Lade Highscore...";
-        // Auch hier Cache Buster hinzufügen
+        const div = document.getElementById('ranking-list');
         const result = await API.post('get_ranking', { _t: new Date().getTime() });
+        
         if (result.status === 'success') {
-            list.innerHTML = "";
-            if (result.data.length === 0) {
-                 list.innerHTML = "<p style='text-align:center;'>Noch keine Punkte vergeben.</p>";
-                 return;
-            }
+            div.innerHTML = "";
             result.data.forEach((entry, idx) => {
                 let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : ''));
-                list.innerHTML += `<div class="list-item"><span>${medal} <strong>${entry.name}</strong></span><span class="points-badge">${entry.points} Pkt</span></div>`;
+                div.innerHTML += `
+                    <div class="list-item" onclick='TasksModule.showRankingDetails(${JSON.stringify(result.log)}, "${entry.name}")'>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:1.2rem;">${medal}</span>
+                            <strong>${entry.name}</strong>
+                        </div>
+                        <span class="points-badge">${entry.points} Pkt</span>
+                    </div>`;
             });
-        } else {
-            list.innerHTML = "Fehler beim Laden des Rankings.";
+            div.innerHTML += `<p style="text-align:center; font-size:0.8rem; color:var(--text-muted); margin-top:20px;">Tippe auf einen Namen für Details.</p>`;
         }
+    },
+
+    showRankingDetails(allLogs, username) {
+        const modal = document.getElementById('ranking-modal');
+        const list = document.getElementById('ranking-modal-list');
+        document.getElementById('ranking-modal-user').innerText = `Historie: ${username}`;
+        
+        // Filtern
+        const userLogs = allLogs.filter(l => l.user === username);
+        
+        list.innerHTML = "";
+        if(userLogs.length === 0) {
+            list.innerHTML = "<p>Keine Einträge.</p>";
+        } else {
+            // Neueste zuerst
+            userLogs.reverse().forEach(log => {
+                // Datum formatieren
+                const d = new Date(log.date);
+                const dateStr = d.getDate() + "." + (d.getMonth()+1) + ".";
+                list.innerHTML += `
+                    <div class="ranking-detail-row">
+                        <span>${dateStr} ${log.reason}</span>
+                        <span style="color:var(--secondary);">+${log.points}</span>
+                    </div>
+                `;
+            });
+        }
+        modal.style.display = 'flex';
     }
 };
