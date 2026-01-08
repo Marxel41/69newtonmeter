@@ -23,45 +23,74 @@ const SodaModule = {
     },
 
     async loadState() {
-        const result = await API.post('read', { sheet: 'SodaState', _t: new Date().getTime() });
-        if(result.status === 'success') {
-            // Wir nehmen an Zeile 1=Header, 2=Count, 3=Date
-            const countRow = result.data.find(r => r.key === 'count');
-            const dateRow = result.data.find(r => r.key === 'start_date');
-            
-            this.count = parseInt(countRow ? countRow.value : 0);
-            this.startDate = dateRow ? dateRow.value : 'Unbekannt';
-            
-            this.updateUI();
+        try {
+            const result = await API.post('read', { sheet: 'SodaState', _t: new Date().getTime() });
+            if(result.status === 'success') {
+                const countRow = result.data.find(r => r.key === 'count');
+                const dateRow = result.data.find(r => r.key === 'start_date');
+                
+                this.count = parseInt(countRow ? countRow.value : 0);
+                this.startDate = dateRow ? dateRow.value : null;
+                
+                this.updateUI();
+            }
+        } catch (e) {
+            console.error("Ladefehler Soda:", e);
         }
     },
 
     updateUI() {
-        document.getElementById('soda-val').innerText = this.count;
-        const d = new Date(this.startDate);
-        const dateStr = !isNaN(d.getTime()) ? `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}` : '-';
-        document.getElementById('soda-info').innerText = `Gestartet am: ${dateStr}`;
+        const elVal = document.getElementById('soda-val');
+        const elInfo = document.getElementById('soda-info');
+        if(elVal) elVal.innerText = this.count;
+        
+        if(elInfo) {
+            if (this.startDate) {
+                const d = new Date(this.startDate);
+                const dateStr = !isNaN(d.getTime()) ? `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}` : '-';
+                elInfo.innerText = `Gestartet am: ${dateStr}`;
+            } else {
+                elInfo.innerText = "Startdatum unbekannt";
+            }
+        }
     },
 
     async update(mode) {
-        // Optimistic UI
         if(mode === 'inc') this.count++;
         if(mode === 'dec' && this.count > 0) this.count--;
         this.updateUI();
 
-        // Backend Update
+        // Im Hintergrund speichern
         await API.post('soda_update', { mode: mode });
     },
 
     async finish() {
-        if(!confirm("Ist der Zylinder wirklich leer? Dies speichert die Statistik und setzt den Zähler auf 0.")) return;
+        if(!confirm("Ist der Zylinder wirklich leer?\nDies speichert die Statistik und setzt den Zähler auf 0.")) return;
         
-        const result = await API.post('soda_update', { mode: 'reset' });
-        if(result.status === 'success') {
-            this.count = 0;
-            this.startDate = new Date().toISOString(); // Ca. jetzt
-            this.updateUI();
-            alert("Reset erfolgreich! Statistik gespeichert.");
+        const btn = document.querySelector('.soda-counter + .soda-controls + div button');
+        if(btn) {
+            btn.innerText = "Speichere...";
+            btn.disabled = true;
+        }
+
+        try {
+            const result = await API.post('soda_update', { mode: 'reset' });
+            
+            if(result.status === 'success') {
+                this.count = 0;
+                this.startDate = new Date().toISOString();
+                this.updateUI();
+                alert("Reset erfolgreich! Neuer Zylinder gestartet.");
+            } else {
+                alert("Fehler beim Speichern: " + (result.message || "Unbekannt"));
+            }
+        } catch (e) {
+            alert("Verbindungsfehler: " + e.message);
+        } finally {
+            if(btn) {
+                btn.innerText = "Zylinder leer & Reset";
+                btn.disabled = false;
+            }
         }
     }
 };
