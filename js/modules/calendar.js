@@ -1,18 +1,21 @@
 const CalendarModule = {
     currentDate: new Date(),
     events: [],
+    targetId: null,
 
-    async init() {
-        const container = document.getElementById('app-container');
+    async init(targetDivId) {
+        this.targetId = targetDivId;
+        const container = document.getElementById(targetDivId);
+        // Minimalistischeres Design für Dashboard
         container.innerHTML = `
-            <div class="cal-header">
+            <div class="cal-header" style="background:var(--card-bg); border-radius:10px 10px 0 0; border:none;">
                 <button onclick="CalendarModule.changeMonth(-1)">❮</button>
-                <h2 id="cal-month-name">Lade...</h2>
+                <h2 id="cal-month-name" style="font-size:1rem;">Lade...</h2>
                 <button onclick="CalendarModule.changeMonth(1)">❯</button>
             </div>
-            <div class="cal-grid" id="cal-grid"></div>
-            <div class="cal-controls">
-                <button class="fab" onclick="CalendarModule.showAddModal()">+</button>
+            <div class="cal-grid" id="cal-grid" style="background:var(--card-bg); border-radius:0 0 10px 10px;"></div>
+            <div style="text-align:right; margin-top:5px;">
+                <button class="primary" style="width:auto; padding:5px 15px; font-size:0.8rem;" onclick="document.getElementById('event-modal').style.display='flex'">+ Termin</button>
             </div>
         `;
         await this.loadEvents();
@@ -20,14 +23,12 @@ const CalendarModule = {
     },
 
     async loadEvents() {
-        // Lade Events UND Tasks
         const resEvents = await API.post('read', { sheet: 'Events' });
         const resTasks = await API.post('read', { sheet: 'Tasks' });
         
         this.events = [];
         if (resEvents.status === 'success') this.events = this.events.concat(resEvents.data);
         if (resTasks.status === 'success') {
-            // Nur offene Tasks
             const activeTasks = resTasks.data.filter(t => t.status === 'open');
             this.events = this.events.concat(activeTasks);
         }
@@ -36,9 +37,10 @@ const CalendarModule = {
     render() {
         const grid = document.getElementById('cal-grid');
         const monthLabel = document.getElementById('cal-month-name');
+        if(!grid) return;
+
         const year = this.currentDate.getFullYear();
         const month = this.currentDate.getMonth();
-        
         const monthNames = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
         monthLabel.innerText = `${monthNames[month]} ${year}`;
         grid.innerHTML = "";
@@ -57,19 +59,40 @@ const CalendarModule = {
             
             let eventDots = "";
             daysEvents.forEach(e => {
-                let color = 'dot-green';
-                if(e.type === 'cleaning') color = 'dot-blue';
-                if(e.type === 'shopping') color = 'dot-red';
-                if(e.type === 'party') color = 'dot-purple';
-                eventDots += `<span class="dot ${color}"></span>`;
+                let color = 'var(--secondary)';
+                if(e.type === 'cleaning') color = 'var(--primary)';
+                if(e.type === 'shopping') color = 'var(--danger)';
+                if(e.type === 'party') color = '#e91e63';
+                if(e.type === 'garbage') color = '#ff9800'; // Orange
+                eventDots += `<span class="dot" style="background-color:${color}"></span>`;
             });
 
             const isToday = new Date().toISOString().split('T')[0] === dateStr ? 'today' : '';
-            const titles = daysEvents.map(e => "• " + e.title).join("\\n");
-            const clickAction = daysEvents.length > 0 ? `alert('${titles}')` : '';
-
-            grid.innerHTML += `<div class="cal-day ${isToday}" onclick="${clickAction}"><span>${i}</span><div class="dots">${eventDots}</div></div>`;
+            
+            // JSON stringify für Übergabe an onclick ist tricky wegen Anführungszeichen. 
+            // Wir speichern die Events temporär in einem globalen Array oder nutzen Index
+            // Einfacher: Wir bauen die Onclick Logik so, dass sie Daten holt.
+            
+            grid.innerHTML += `<div class="cal-day ${isToday}" onclick='CalendarModule.showDayDetails("${dateStr}")'><span>${i}</span><div class="dots">${eventDots}</div></div>`;
         }
+    },
+
+    showDayDetails(dateStr) {
+        const dateObj = new Date(dateStr);
+        const events = this.getEventsForDate(dateObj, dateStr);
+        
+        if(events.length === 0) return; // Oder leeres Modal öffnen
+
+        const modal = document.getElementById('day-modal');
+        const list = document.getElementById('day-modal-list');
+        document.getElementById('day-modal-title').innerText = dateStr.split('-').reverse().join('.');
+        
+        list.innerHTML = "";
+        events.forEach(e => {
+            list.innerHTML += `<div class="list-item"><strong>${e.title}</strong><small>${e.type || 'Allgemein'}</small></div>`;
+        });
+        
+        modal.style.display = 'flex';
     },
 
     getEventsForDate(dateObj, dateStr) {
@@ -86,8 +109,9 @@ const CalendarModule = {
         });
     },
     changeMonth(step) { this.currentDate.setMonth(this.currentDate.getMonth() + step); this.render(); },
-    showAddModal() { document.getElementById('event-modal').style.display = 'flex'; document.getElementById('evt-date').valueAsDate = new Date(); },
+    
     async saveEvent() {
+        // ... (Bleibt gleich, nur nutzt API)
         const title = document.getElementById('evt-title').value;
         const date = document.getElementById('evt-date').value;
         const type = document.getElementById('evt-type').value;
