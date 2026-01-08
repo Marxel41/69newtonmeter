@@ -7,6 +7,11 @@ const App = {
             try { this.user = JSON.parse(savedUser); this.showDashboard(); } 
             catch (e) { localStorage.removeItem('wg_user'); }
         }
+
+        // Lade Notification Status aus Speicher
+        const notifEnabled = localStorage.getItem('wg_notif_enabled') === 'true';
+        // Wir setzen die Checkbox erst, wenn das Modal geöffnet wird, 
+        // aber wir merken uns den Status.
     },
 
     async login() {
@@ -35,7 +40,7 @@ const App = {
     },
 
     showDashboard() {
-        // Schließe alle Modals & Container
+        // Schließe alle Modals
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('settings-btn').style.display = 'block';
@@ -47,21 +52,11 @@ const App = {
         
         container.innerHTML = `
             <div class="dashboard-grid">
-                <div class="tile" onclick="App.loadModule('todo')">
-                    <span>📌</span><h3>To-Dos</h3>
-                </div>
-                <div class="tile" onclick="App.loadModule('cleaning')">
-                    <span>🧹</span><h3>Putzplan</h3>
-                </div>
-                <div class="tile" onclick="App.loadModule('shopping')">
-                    <span>🛒</span><h3>Einkauf</h3>
-                </div>
-                <div class="tile" onclick="App.loadModule('voting')">
-                    <span>🗳️</span><h3>Votes</h3>
-                </div>
-                <div class="tile" onclick="App.loadModule('soda')">
-                    <span>💧</span><h3>Soda</h3>
-                </div>
+                <div class="tile" onclick="App.loadModule('todo')"><span>📌</span><h3>To-Dos</h3></div>
+                <div class="tile" onclick="App.loadModule('cleaning')"><span>🧹</span><h3>Putzplan</h3></div>
+                <div class="tile" onclick="App.loadModule('shopping')"><span>🛒</span><h3>Einkauf</h3></div>
+                <div class="tile" onclick="App.loadModule('voting')"><span>🗳️</span><h3>Votes</h3></div>
+                <div class="tile" onclick="App.loadModule('soda')"><span>💧</span><h3>Soda</h3></div>
                 <div class="tile wide" onclick="App.loadModule('ranking')">
                     <div style="display:flex; align-items:center; width:100%; justify-content:space-between;">
                         <div><span>🏆</span><h3 style="display:inline; margin-left:10px;">Ranking</h3></div>
@@ -69,9 +64,8 @@ const App = {
                     </div>
                 </div>
             </div>
-            
             <div style="padding: 15px;">
-                <h3 style="margin-bottom:10px; color:var(--text-muted);">Kalender & Müll</h3>
+                <h3 style="margin-bottom:10px; color:var(--text-muted);">Kalender</h3>
                 <div id="calendar-wrapper"></div>
             </div>
         `;
@@ -80,12 +74,17 @@ const App = {
     },
 
     loadModule(moduleName) {
-        document.getElementById('settings-btn').style.display = 'none'; // Settings nur im Dashboard
+        document.getElementById('settings-btn').style.display = 'none';
         const container = document.getElementById('app-container');
         
+        // ZURÜCK BUTTON FIX: Mehr Padding, Flexbox Zentrierung, Klickbarer Bereich
         const shell = (title, id) => `
             <div class="module-container">
-                <button class="back-btn" onclick="App.showDashboard()" style="background:none; border:none; color:var(--primary); font-size:1rem; cursor:pointer; margin-bottom:10px;">❮ Zurück</button>
+                <div style="padding-bottom: 15px;">
+                    <button class="back-btn" onclick="App.showDashboard()">
+                        <span style="font-size:1.5rem; margin-right:5px;">❮</span> Zurück
+                    </button>
+                </div>
                 <h2 style="margin-bottom:15px;">${title}</h2>
                 <div id="${id}">Lade...</div>
             </div>
@@ -96,19 +95,30 @@ const App = {
         else if (moduleName === 'shopping') { container.innerHTML = shell('Einkauf', 'shop-cont'); ShoppingModule.init('shop-cont'); }
         else if (moduleName === 'voting') { container.innerHTML = shell('Abstimmung', 'vote-cont'); VotingModule.init('vote-cont'); }
         else if (moduleName === 'ranking') { container.innerHTML = shell('Ranking Details', 'rank-cont'); TasksModule.initRanking('rank-cont'); }
-        else if (moduleName === 'soda') { container.innerHTML = shell('SodaStream Counter', 'soda-cont'); SodaModule.init('soda-cont'); }
+        else if (moduleName === 'soda') { container.innerHTML = shell('SodaStream', 'soda-cont'); SodaModule.init('soda-cont'); }
     },
 
     toggleSettings() {
         const modal = document.getElementById('settings-modal');
-        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+        modal.style.display = 'flex';
+        
+        // Checkbox Status setzen
+        const cb = document.getElementById('sett-notif');
+        cb.checked = localStorage.getItem('wg_notif_enabled') === 'true';
     },
 
     toggleNotifications() {
-        if (!("Notification" in window)) return alert("Browser unterstützt keine Benachrichtigungen.");
-        Notification.requestPermission().then(perm => {
-            if (perm === "granted") new Notification("Benachrichtigungen aktiviert!");
-        });
+        const cb = document.getElementById('sett-notif');
+        const isEnabled = cb.checked;
+        
+        // Speichern
+        localStorage.setItem('wg_notif_enabled', isEnabled);
+
+        if (isEnabled && "Notification" in window) {
+            Notification.requestPermission().then(perm => {
+                if (perm === "granted") new Notification("Benachrichtigungen aktiviert!");
+            });
+        }
     }
 };
 
