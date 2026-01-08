@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
@@ -11,45 +11,34 @@
 
     <header>
         <h1>WG Hub</h1>
-        <div id="user-info" style="display:none; font-size: 0.9rem; opacity: 0.9; margin-top:5px;"></div>
+        <div id="user-info"></div>
     </header>
 
     <main id="app-container">
         <!-- Login Screen -->
-        <div id="login-screen">
-            <h2>Willkommen</h2>
-            <input type="text" id="login-name" placeholder="Dein Name">
+        <div id="login-screen" style="padding: 20px; text-align: center;">
+            <h2 style="margin-bottom: 20px;">Willkommen</h2>
+            <input type="text" id="login-name" placeholder="Name">
             <input type="password" id="login-pin" placeholder="PIN" inputmode="numeric">
-            <button class="primary" onclick="App.login()">Einloggen</button>
-            <p id="login-msg" style="color: red; margin-top:10px;"></p>
+            <button class="primary" onclick="App.login()">Starten</button>
+            <p id="login-msg" style="color: var(--danger); margin-top: 15px;"></p>
         </div>
     </main>
 
-    <!-- Navigation -->
-    <nav id="main-nav" style="display:none;">
-        <button onclick="App.loadModule('dashboard')">
-            <span>📅</span> Kalender
-        </button>
-        <button onclick="App.loadModule('cleaning')">
-            <span>🧹</span> Putzen
-        </button>
-        <button onclick="App.loadModule('shopping')">
-            <span>🛒</span> Einkauf
-        </button>
-    </nav>
+    <!-- Templates & Modals -->
 
-    <!-- Modal für Kalender -->
+    <!-- Event Modal (Kalender) -->
     <div id="event-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>Neuer Termin</h3>
-            <label>Titel</label>
-            <input type="text" id="evt-title" placeholder="Was steht an?">
-            <label>Datum</label>
-            <input type="date" id="evt-date">
-            <label>Kategorie</label>
+            <label>Titel</label><input type="text" id="evt-title">
+            <label>Datum</label><input type="date" id="evt-date">
+            <label>Typ</label>
             <select id="evt-type">
                 <option value="general">Allgemein</option>
                 <option value="party">Party / Besuch</option>
+                <option value="garbage">Müllabfuhr</option>
+                <option value="repair">Reparatur</option>
             </select>
             <label>Wiederholung</label>
             <select id="evt-recurrence">
@@ -59,9 +48,27 @@
                 <option value="yearly">Jährlich</option>
             </select>
             <div class="modal-actions">
-                <button onclick="document.getElementById('event-modal').style.display='none'">Abbr.</button>
+                <button onclick="document.getElementById('event-modal').style.display='none'" style="background:none; border:none; color:white;">Abbr.</button>
                 <button class="primary" onclick="CalendarModule.saveEvent()">Speichern</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Day Details Modal (Wenn man auf Tag klickt) -->
+    <div id="day-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3 id="day-modal-title">Details</h3>
+            <div id="day-modal-list" style="margin: 15px 0;"></div>
+            <button class="primary" onclick="document.getElementById('day-modal').style.display='none'">Schließen</button>
+        </div>
+    </div>
+
+    <!-- Ranking Details Modal -->
+    <div id="ranking-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3 id="ranking-modal-user">Punkte Historie</h3>
+            <div id="ranking-modal-list" style="max-height: 300px; overflow-y: auto;"></div>
+            <button class="primary" onclick="document.getElementById('ranking-modal').style.display='none'" style="margin-top:10px;">Schließen</button>
         </div>
     </div>
 
@@ -70,6 +77,7 @@
     <script src="js/modules/calendar.js"></script>
     <script src="js/modules/shopping.js"></script>
     <script src="js/modules/tasks.js"></script>
+    <script src="js/modules/voting.js"></script>
     <script src="js/main.js"></script>
 
 </body>
