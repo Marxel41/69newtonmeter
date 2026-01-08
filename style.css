@@ -18,23 +18,22 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Header */
 header {
     background: #1f1f1f;
     padding: 15px;
     position: sticky;
     top: 0;
-    z-index: 1000;
+    /* Reduzierter Z-Index, damit Modals und wichtige Buttons drüber können */
+    z-index: 500; 
     border-bottom: 1px solid #333;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 50px; /* Feste Höhe für Layout-Sicherheit */
+    height: 50px;
     box-sizing: border-box;
 }
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); }
 
-/* Dashboard Kacheln */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -59,25 +58,13 @@ header {
 .tile h3 { margin: 0; font-size: 0.9rem; font-weight: 500; }
 .tile.wide { grid-column: span 2; aspect-ratio: auto; padding: 20px; align-items: flex-start; text-align: left; }
 
-/* Modul Container & Zurück Button */
 .module-container { 
-    padding: 20px 15px; 
-    /* Animation beim Öffnen */
+    padding: 15px; 
     animation: slideIn 0.2s ease-out;
+    position: relative;
+    z-index: 600; /* Höher als Header */
 }
 @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.back-btn {
-    background: transparent;
-    border: none;
-    color: var(--primary);
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    padding: 10px 10px 10px 0; /* Großer Klickbereich */
-}
 
 /* Kalender */
 .dots { display: flex; gap: 2px; margin-top: 3px; flex-wrap: wrap; justify-content: center; height: 6px; }
@@ -89,7 +76,7 @@ header {
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
 .modal-content { 
     background: var(--card-bg); 
-    padding: 25px 20px 20px 20px; /* Mehr Platz oben */
+    padding: 25px 20px 20px 20px; 
     border-radius: 12px; 
     width: 85%; 
     max-width: 350px; 
@@ -99,7 +86,6 @@ header {
     position: relative; 
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
-
 .close-modal-x {
     position: absolute;
     top: 10px;
@@ -113,7 +99,6 @@ header {
     padding: 5px;
 }
 
-/* Inputs & Buttons */
 input, select { background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 8px; }
 button.primary { background: var(--primary); color: black; font-weight: bold; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; }
 
