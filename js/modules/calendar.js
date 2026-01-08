@@ -20,29 +20,28 @@ const CalendarModule = {
     },
 
     async loadEvents() {
+        // Robusterer Ladevorgang
         try {
-            const p1 = API.post('read', { sheet: 'Events', _t: Date.now() });
-            const p2 = API.post('read', { sheet: 'Tasks', _t: Date.now() });
-            // Falls get_garbage im Backend noch nicht existiert, fangen wir den Fehler ab
-            const p3 = API.post('get_garbage').catch(e => ({status:'error'}));
-
-            const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+            const results = await Promise.all([
+                API.post('read', { sheet: 'Events', _t: Date.now() }),
+                API.post('read', { sheet: 'Tasks', _t: Date.now() }),
+                API.post('get_garbage')
+            ]);
             
             this.events = [];
-            if(r1.status === 'success') this.events.push(...r1.data);
-            if(r2.status === 'success') this.events.push(...r2.data.filter(t => t.status === 'open'));
             
-            if(r3 && r3.status === 'success' && Array.isArray(r3.data)) {
-                const garbage = r3.data.map(d => ({ 
-                    date: d.date, 
-                    title: "Müll: " + d.title, 
-                    type: "garbage" 
-                }));
+            // Events Sheet
+            if(results[0].status === 'success') this.events.push(...results[0].data);
+            
+            // Tasks Sheet
+            if(results[1].status === 'success') this.events.push(...results[1].data.filter(t => t.status === 'open'));
+            
+            // Müll
+            if(results[2].status === 'success' && Array.isArray(results[2].data)) {
+                const garbage = results[2].data.map(d => ({ date: d.date, title: "Müll: " + d.title, type: "garbage" }));
                 this.events.push(...garbage);
             }
-        } catch (e) {
-            console.error("Kalender Ladefehler", e);
-        }
+        } catch (e) { console.error("Cal load error", e); }
     },
 
     render() {
@@ -58,30 +57,34 @@ const CalendarModule = {
         grid.innerHTML = "";
         ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].forEach(d => grid.innerHTML += `<div class="day-name">${d}</div>`);
 
+        // Ersten Tag finden
         const firstDay = new Date(year, month, 1).getDay();
         const adjFirstDay = firstDay === 0 ? 6 : firstDay - 1;
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+        // Leere Felder am Anfang
         for (let i = 0; i < adjFirstDay; i++) grid.innerHTML += `<div></div>`;
 
+        // Tage rendern
         for (let i = 1; i <= daysInMonth; i++) {
-            // Datum Format YYYY-MM-DD
+            // Wir bauen den Datums-String MANUELL, um Zeitzonen zu umgehen: "2024-06-12"
             const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            
             const daysEvents = this.getEventsForDate(dateStr);
             
             let dots = "";
             daysEvents.forEach(e => {
-                let col = '#aaa'; // Default Grau
-                if(e.type === 'cleaning') col = 'var(--primary)'; // Lila
-                if(e.type === 'shopping') col = 'var(--danger)'; // Rot
-                if(e.type === 'party') col = '#e91e63'; // Pink
-                if(e.type === 'garbage') col = 'var(--veto)'; // Orange
-                
-                dots += `<span class="dot" style="background-color:${col};"></span>`;
+                let col = '#aaa';
+                if(e.type === 'cleaning') col = 'var(--primary)';
+                if(e.type === 'shopping') col = 'var(--danger)';
+                if(e.type === 'party') col = '#e91e63';
+                if(e.type === 'garbage') col = 'var(--veto)';
+                dots += `<span class="dot" style="background:${col}"></span>`;
             });
 
-            // Heute markieren
-            const todayStr = new Date().toISOString().split('T')[0];
+            // "Heute" Erkennung auch via String
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
             const isToday = todayStr === dateStr ? 'today' : '';
 
             grid.innerHTML += `
@@ -92,14 +95,44 @@ const CalendarModule = {
         }
     },
 
+    // Die neue, sichere Logik
+    getEventsForDate(targetDateStr) {
+        return this.events.filter(e => {
+            if (!e.date) return false;
+            // Wir nehmen nur die ersten 10 Zeichen (YYYY-MM-DD) vom Event Datum
+            const eDateStr = e.date.substring(0, 10);
+            
+            // 1. Exaktes Datum (String Vergleich = 100% sicher)
+            if ((!e.recurrence || e.recurrence === 'none') && eDateStr === targetDateStr) {
+                return true;
+            }
+            
+            // 2. Wiederholungen
+            if (e.recurrence) {
+                // Wir parsen das Datum manuell um sicher zu gehen
+                const [eY, eM, eD] = eDateStr.split('-').map(Number);
+                const [tY, tM, tD] = targetDateStr.split('-').map(Number);
+                
+                // Datum Objekt NUR für Vergleiche wie "Wochentag" erstellen, mit fester Zeit 12:00
+                const eDateObj = new Date(eY, eM-1, eD, 12, 0, 0);
+                const tDateObj = new Date(tY, tM-1, tD, 12, 0, 0);
+                
+                if (tDateObj < eDateObj) return false;
+
+                if (e.recurrence === 'weekly') return tDateObj.getDay() === eDateObj.getDay();
+                if (e.recurrence === 'monthly') return tD === eD;
+                if (e.recurrence === 'yearly') return tD === eD && tM === eM;
+            }
+            return false;
+        });
+    },
+
     openDay(dateStr) {
         const events = this.getEventsForDate(dateStr);
-        // Modal öffnen auch wenn leer, damit man sieht dass nix ist
         const modal = document.getElementById('day-modal');
         const list = document.getElementById('day-modal-list');
         const title = document.getElementById('day-modal-title');
         
-        // Datum schön formatieren DD.MM.YYYY
         const [y, m, d] = dateStr.split('-');
         title.innerText = `${d}.${m}.${y}`;
         
@@ -118,33 +151,6 @@ const CalendarModule = {
         modal.style.display = 'flex';
     },
 
-    getEventsForDate(dateStr) {
-        // Wir vergleichen Strings, das ist sicherer gegen Zeitzonen
-        // dateStr ist immer "YYYY-MM-DD" vom Kalender Loop
-        return this.events.filter(e => {
-            if (!e.date) return false;
-            
-            // Event Datum normalisieren (nur YYYY-MM-DD Teil)
-            const eDateStr = e.date.split('T')[0];
-            
-            // 1. Exaktes Datum
-            if ((!e.recurrence || e.recurrence === 'none') && eDateStr === dateStr) return true;
-            
-            // 2. Wiederholungen
-            if (e.recurrence && e.recurrence !== 'none') {
-                const start = new Date(eDateStr);
-                const current = new Date(dateStr);
-                
-                if (current < start) return false; // Event hat noch nicht begonnen
-                
-                if (e.recurrence === 'weekly') return current.getDay() === start.getDay();
-                if (e.recurrence === 'monthly') return current.getDate() === start.getDate();
-                if (e.recurrence === 'yearly') return current.getDate() === start.getDate() && current.getMonth() === start.getMonth();
-                // Hier könnten Daily/3Days etc. ergänzt werden
-            }
-            return false;
-        });
-    },
     changeMonth(step) { this.currentDate.setMonth(this.currentDate.getMonth() + step); this.render(); },
     
     async saveEvent() {
@@ -153,14 +159,13 @@ const CalendarModule = {
         const type = document.getElementById('evt-type').value;
         const recur = document.getElementById('evt-recurrence').value;
         
-        if(!title || !date) { alert("Titel und Datum fehlen!"); return; }
-        
-        await API.post('create', { sheet: 'Events', payload: JSON.stringify({title, date, type, recurrence: recur, author: App.user.name}) });
+        if(!title || !date) { alert("Bitte ausfüllen"); return; }
+
+        await API.post('create', { sheet: 'Events', payload: JSON.stringify({
+            title, date, type, recurrence: recur, author: App.user.name
+        })});
         document.getElementById('event-modal').style.display = 'none';
-        
-        // Inputs leeren
         document.getElementById('evt-title').value = "";
-        
         await this.loadEvents();
         this.render();
     }
