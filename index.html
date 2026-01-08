@@ -12,8 +12,7 @@
         <h1>WG Hub</h1>
         <div class="header-actions">
             <div id="user-info"></div>
-            <!-- Settings Icon (Zahnrad) -->
-            <button class="icon-btn" onclick="App.toggleSettings()" style="display:none;" id="settings-btn">⚙️</button>
+            <button class="icon-btn" onclick="App.toggleSettings()" id="settings-btn" style="display:none;">⚙️</button>
         </div>
     </header>
 
@@ -28,70 +27,63 @@
         </div>
     </main>
 
-    <!-- Modals -->
-
-    <!-- Settings Modal -->
+    <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="modal" style="display:none;">
         <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('settings-modal').style.display='none'">&times;</button>
             <h3>Einstellungen</h3>
             <div style="margin: 15px 0;">
-                <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <label style="display:flex; justify-content:space-between; align-items:center;">
                     <span>Benachrichtigungen</span>
-                    <input type="checkbox" id="sett-notif" style="width:auto;" onchange="App.toggleNotifications()">
+                    <input type="checkbox" onchange="App.toggleNotifications()" style="width:auto;">
                 </label>
-                <p style="font-size:0.8rem; color:var(--text-muted);">
-                    Hinweis: Echte Push-Benachrichtigungen aufs Handy funktionieren nur mit installierter App und Server. 
-                    Aktuell: Badge-Update & lokale Hinweise.
-                </p>
             </div>
-            <button onclick="App.logout()" style="background:#333; color:white; padding:10px; border:none; width:100%; border-radius:8px; margin-bottom:10px;">Abmelden</button>
-            <button class="primary" onclick="document.getElementById('settings-modal').style.display='none'">Schließen</button>
+            <button onclick="App.logout()" style="background:#333; color:white; padding:10px; border:none; width:100%; border-radius:8px;">Abmelden</button>
         </div>
     </div>
 
-    <!-- Event Modal -->
+    <!-- EVENT MODAL -->
     <div id="event-modal" class="modal" style="display:none;">
         <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('event-modal').style.display='none'">&times;</button>
             <h3>Neuer Termin</h3>
-            <input type="text" id="evt-title" placeholder="Titel">
-            <input type="date" id="evt-date">
+            <label>Titel</label><input type="text" id="evt-title">
+            <label>Datum</label><input type="date" id="evt-date">
+            <label>Typ</label>
             <select id="evt-type">
                 <option value="general">Allgemein</option>
                 <option value="party">Party / Besuch</option>
                 <option value="garbage">Müllabfuhr</option>
             </select>
+            <label>Wiederholung</label>
             <select id="evt-recurrence">
                 <option value="none">Einmalig</option>
                 <option value="weekly">Wöchentlich</option>
                 <option value="monthly">Monatlich</option>
                 <option value="yearly">Jährlich</option>
             </select>
-            <div class="modal-actions">
-                <button onclick="document.getElementById('event-modal').style.display='none'" style="background:none; border:none; color:white;">Abbr.</button>
-                <button class="primary" onclick="CalendarModule.saveEvent()">Speichern</button>
-            </div>
+            <button class="primary" onclick="CalendarModule.saveEvent()">Speichern</button>
         </div>
     </div>
 
-    <!-- Day Details -->
+    <!-- DAY DETAILS -->
     <div id="day-modal" class="modal" style="display:none;">
         <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('day-modal').style.display='none'">&times;</button>
             <h3 id="day-modal-title">Details</h3>
-            <div id="day-modal-list" style="margin: 15px 0; max-height:200px; overflow-y:auto;"></div>
-            <button class="primary" onclick="document.getElementById('day-modal').style.display='none'">Schließen</button>
+            <div id="day-modal-list" style="margin: 15px 0; max-height:250px; overflow-y:auto;"></div>
         </div>
     </div>
 
-    <!-- Ranking Details -->
+    <!-- RANKING DETAILS -->
     <div id="ranking-modal" class="modal" style="display:none;">
         <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('ranking-modal').style.display='none'">&times;</button>
             <h3 id="ranking-modal-user">Historie</h3>
             <div id="ranking-modal-list" style="max-height: 300px; overflow-y: auto;"></div>
-            <button class="primary" onclick="document.getElementById('ranking-modal').style.display='none'">Schließen</button>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="js/api.js"></script>
     <script src="js/modules/calendar.js"></script>
     <script src="js/modules/shopping.js"></script>
