@@ -20,19 +20,28 @@ const CalendarModule = {
     },
 
     async loadEvents() {
-        const p1 = API.post('read', { sheet: 'Events' });
-        const p2 = API.post('read', { sheet: 'Tasks' });
-        const p3 = API.post('get_garbage'); // Holt Mülltermine vom Backend
+        try {
+            const p1 = API.post('read', { sheet: 'Events', _t: Date.now() });
+            const p2 = API.post('read', { sheet: 'Tasks', _t: Date.now() });
+            // Falls get_garbage im Backend noch nicht existiert, fangen wir den Fehler ab
+            const p3 = API.post('get_garbage').catch(e => ({status:'error'}));
 
-        const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
-        
-        this.events = [];
-        if(r1.status === 'success') this.events.push(...r1.data);
-        if(r2.status === 'success') this.events.push(...r2.data.filter(t => t.status === 'open'));
-        if(r3.status === 'success') {
-            // Mülltermine markieren
-            const garbage = r3.data.map(d => ({ date: d.date, title: "Müll: " + d.title, type: "garbage" }));
-            this.events.push(...garbage);
+            const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+            
+            this.events = [];
+            if(r1.status === 'success') this.events.push(...r1.data);
+            if(r2.status === 'success') this.events.push(...r2.data.filter(t => t.status === 'open'));
+            
+            if(r3 && r3.status === 'success' && Array.isArray(r3.data)) {
+                const garbage = r3.data.map(d => ({ 
+                    date: d.date, 
+                    title: "Müll: " + d.title, 
+                    type: "garbage" 
+                }));
+                this.events.push(...garbage);
+            }
+        } catch (e) {
+            console.error("Kalender Ladefehler", e);
         }
     },
 
@@ -56,20 +65,25 @@ const CalendarModule = {
         for (let i = 0; i < adjFirstDay; i++) grid.innerHTML += `<div></div>`;
 
         for (let i = 1; i <= daysInMonth; i++) {
+            // Datum Format YYYY-MM-DD
             const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-            const daysEvents = this.getEventsForDate(new Date(dateStr), dateStr);
+            const daysEvents = this.getEventsForDate(dateStr);
             
             let dots = "";
             daysEvents.forEach(e => {
-                let col = '#bbb';
-                if(e.type === 'cleaning') col = 'var(--primary)';
+                let col = '#aaa'; // Default Grau
+                if(e.type === 'cleaning') col = 'var(--primary)'; // Lila
+                if(e.type === 'shopping') col = 'var(--danger)'; // Rot
+                if(e.type === 'party') col = '#e91e63'; // Pink
                 if(e.type === 'garbage') col = 'var(--veto)'; // Orange
-                if(e.type === 'party') col = '#e91e63';
-                dots += `<span class="dot" style="background:${col}"></span>`;
+                
+                dots += `<span class="dot" style="background-color:${col};"></span>`;
             });
 
-            const isToday = new Date().toISOString().split('T')[0] === dateStr ? 'today' : '';
-            // Fix: Wir nutzen encodeURIComponent für den DateStr um Probleme zu vermeiden
+            // Heute markieren
+            const todayStr = new Date().toISOString().split('T')[0];
+            const isToday = todayStr === dateStr ? 'today' : '';
+
             grid.innerHTML += `
                 <div class="cal-day ${isToday}" onclick="CalendarModule.openDay('${dateStr}')">
                     <span>${i}</span>
@@ -79,44 +93,75 @@ const CalendarModule = {
     },
 
     openDay(dateStr) {
-        const events = this.getEventsForDate(new Date(dateStr), dateStr);
-        if(events.length === 0) return;
-
+        const events = this.getEventsForDate(dateStr);
+        // Modal öffnen auch wenn leer, damit man sieht dass nix ist
+        const modal = document.getElementById('day-modal');
         const list = document.getElementById('day-modal-list');
-        list.innerHTML = "";
-        document.getElementById('day-modal-title').innerText = dateStr.split('-').reverse().join('.');
+        const title = document.getElementById('day-modal-title');
         
-        events.forEach(e => {
-            list.innerHTML += `
-                <div class="list-item">
-                    <strong>${e.title}</strong>
-                    <small style="color:var(--text-muted)">${e.type || 'Event'}</small>
-                </div>`;
-        });
-        document.getElementById('day-modal').style.display = 'flex';
+        // Datum schön formatieren DD.MM.YYYY
+        const [y, m, d] = dateStr.split('-');
+        title.innerText = `${d}.${m}.${y}`;
+        
+        list.innerHTML = "";
+        if(events.length === 0) {
+            list.innerHTML = "<p style='color:var(--text-muted); text-align:center;'>Keine Termine</p>";
+        } else {
+            events.forEach(e => {
+                list.innerHTML += `
+                    <div class="list-item" style="padding:10px;">
+                        <strong>${e.title}</strong>
+                        <small style="display:block; color:var(--text-muted)">${e.type || 'Event'}</small>
+                    </div>`;
+            });
+        }
+        modal.style.display = 'flex';
     },
 
-    getEventsForDate(dObj, dStr) {
+    getEventsForDate(dateStr) {
+        // Wir vergleichen Strings, das ist sicherer gegen Zeitzonen
+        // dateStr ist immer "YYYY-MM-DD" vom Kalender Loop
         return this.events.filter(e => {
-            if(!e.recurrence || e.recurrence === 'none') return e.date && e.date.startsWith(dStr);
-            // Einfache Wiederholungslogik (erweitern wie in vorherigen Versionen nötig für 3-Days etc)
-            // Hier gekürzt für Übersicht, nutzt Logik aus Tasks/Previous Calendar
-            const start = new Date(e.date);
-            if(dObj < start) return false;
+            if (!e.date) return false;
             
-            // Tagesdifferenz für "Alle X Tage"
-            const diffTime = Math.abs(dObj - start);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-
-            if(e.recurrence === 'daily') return true;
-            if(e.recurrence === '3days') return diffDays % 3 === 0;
-            if(e.recurrence === '5days') return diffDays % 5 === 0;
-            if(e.recurrence === 'weekly') return dObj.getDay() === start.getDay();
-            if(e.recurrence === 'monthly') return dObj.getDate() === start.getDate();
-            if(e.recurrence === 'yearly') return dObj.getDate() === start.getDate() && dObj.getMonth() === start.getMonth();
+            // Event Datum normalisieren (nur YYYY-MM-DD Teil)
+            const eDateStr = e.date.split('T')[0];
+            
+            // 1. Exaktes Datum
+            if ((!e.recurrence || e.recurrence === 'none') && eDateStr === dateStr) return true;
+            
+            // 2. Wiederholungen
+            if (e.recurrence && e.recurrence !== 'none') {
+                const start = new Date(eDateStr);
+                const current = new Date(dateStr);
+                
+                if (current < start) return false; // Event hat noch nicht begonnen
+                
+                if (e.recurrence === 'weekly') return current.getDay() === start.getDay();
+                if (e.recurrence === 'monthly') return current.getDate() === start.getDate();
+                if (e.recurrence === 'yearly') return current.getDate() === start.getDate() && current.getMonth() === start.getMonth();
+                // Hier könnten Daily/3Days etc. ergänzt werden
+            }
             return false;
         });
     },
     changeMonth(step) { this.currentDate.setMonth(this.currentDate.getMonth() + step); this.render(); },
-    async saveEvent() { /* Code wie vorher */ }
+    
+    async saveEvent() {
+        const title = document.getElementById('evt-title').value;
+        const date = document.getElementById('evt-date').value;
+        const type = document.getElementById('evt-type').value;
+        const recur = document.getElementById('evt-recurrence').value;
+        
+        if(!title || !date) { alert("Titel und Datum fehlen!"); return; }
+        
+        await API.post('create', { sheet: 'Events', payload: JSON.stringify({title, date, type, recurrence: recur, author: App.user.name}) });
+        document.getElementById('event-modal').style.display = 'none';
+        
+        // Inputs leeren
+        document.getElementById('evt-title').value = "";
+        
+        await this.loadEvents();
+        this.render();
+    }
 };
