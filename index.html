@@ -5,17 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
     <header>
         <h1>WG Hub</h1>
-        <div id="user-info"></div>
+        <div class="header-actions">
+            <div id="user-info"></div>
+            <!-- Settings Icon (Zahnrad) -->
+            <button class="icon-btn" onclick="App.toggleSettings()" style="display:none;" id="settings-btn">⚙️</button>
+        </div>
     </header>
 
     <main id="app-container">
-        <!-- Login Screen -->
+        <!-- Login -->
         <div id="login-screen" style="padding: 20px; text-align: center;">
             <h2 style="margin-bottom: 20px;">Willkommen</h2>
             <input type="text" id="login-name" placeholder="Name">
@@ -25,22 +28,38 @@
         </div>
     </main>
 
-    <!-- Templates & Modals -->
+    <!-- Modals -->
 
-    <!-- Event Modal (Kalender) -->
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>Einstellungen</h3>
+            <div style="margin: 15px 0;">
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <span>Benachrichtigungen</span>
+                    <input type="checkbox" id="sett-notif" style="width:auto;" onchange="App.toggleNotifications()">
+                </label>
+                <p style="font-size:0.8rem; color:var(--text-muted);">
+                    Hinweis: Echte Push-Benachrichtigungen aufs Handy funktionieren nur mit installierter App und Server. 
+                    Aktuell: Badge-Update & lokale Hinweise.
+                </p>
+            </div>
+            <button onclick="App.logout()" style="background:#333; color:white; padding:10px; border:none; width:100%; border-radius:8px; margin-bottom:10px;">Abmelden</button>
+            <button class="primary" onclick="document.getElementById('settings-modal').style.display='none'">Schließen</button>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
     <div id="event-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>Neuer Termin</h3>
-            <label>Titel</label><input type="text" id="evt-title">
-            <label>Datum</label><input type="date" id="evt-date">
-            <label>Typ</label>
+            <input type="text" id="evt-title" placeholder="Titel">
+            <input type="date" id="evt-date">
             <select id="evt-type">
                 <option value="general">Allgemein</option>
                 <option value="party">Party / Besuch</option>
                 <option value="garbage">Müllabfuhr</option>
-                <option value="repair">Reparatur</option>
             </select>
-            <label>Wiederholung</label>
             <select id="evt-recurrence">
                 <option value="none">Einmalig</option>
                 <option value="weekly">Wöchentlich</option>
@@ -54,30 +73,31 @@
         </div>
     </div>
 
-    <!-- Day Details Modal (Wenn man auf Tag klickt) -->
+    <!-- Day Details -->
     <div id="day-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3 id="day-modal-title">Details</h3>
-            <div id="day-modal-list" style="margin: 15px 0;"></div>
+            <div id="day-modal-list" style="margin: 15px 0; max-height:200px; overflow-y:auto;"></div>
             <button class="primary" onclick="document.getElementById('day-modal').style.display='none'">Schließen</button>
         </div>
     </div>
 
-    <!-- Ranking Details Modal -->
+    <!-- Ranking Details -->
     <div id="ranking-modal" class="modal" style="display:none;">
         <div class="modal-content">
-            <h3 id="ranking-modal-user">Punkte Historie</h3>
+            <h3 id="ranking-modal-user">Historie</h3>
             <div id="ranking-modal-list" style="max-height: 300px; overflow-y: auto;"></div>
-            <button class="primary" onclick="document.getElementById('ranking-modal').style.display='none'" style="margin-top:10px;">Schließen</button>
+            <button class="primary" onclick="document.getElementById('ranking-modal').style.display='none'">Schließen</button>
         </div>
     </div>
 
-    <!-- SCRIPTS -->
+    <!-- Scripts -->
     <script src="js/api.js"></script>
     <script src="js/modules/calendar.js"></script>
     <script src="js/modules/shopping.js"></script>
     <script src="js/modules/tasks.js"></script>
     <script src="js/modules/voting.js"></script>
+    <script src="js/modules/sodastream.js"></script>
     <script src="js/main.js"></script>
 
 </body>
