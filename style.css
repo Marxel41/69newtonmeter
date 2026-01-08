@@ -14,11 +14,11 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     margin: 0;
-    padding-bottom: 80px;
+    padding-bottom: 20px; /* Kein Padding für Nav mehr nötig */
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Header */
+/* Header & Settings */
 header {
     background: #1f1f1f;
     padding: 15px;
@@ -30,16 +30,13 @@ header {
     justify-content: space-between;
     align-items: center;
 }
-header h1 { font-size: 1.2rem; margin: 0; color: var(--primary); }
-#user-info { font-size: 0.8rem; color: var(--text-muted); }
+.header-actions { display: flex; gap: 15px; align-items: center; }
+.icon-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-main); }
 
-/* Navigation (Unten, jetzt kleiner da Dashboard da ist) */
-nav { display: none; } /* Wir nutzen jetzt das Kachel-Dashboard */
-
-/* Dashboard Grid (Kacheln) */
+/* Dashboard Grid */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 Spalten */
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     padding: 15px;
 }
@@ -47,27 +44,50 @@ nav { display: none; } /* Wir nutzen jetzt das Kachel-Dashboard */
 .tile {
     background: var(--card-bg);
     border-radius: 12px;
-    padding: 20px;
+    padding: 15px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    aspect-ratio: 1/1; /* Quadratisch */
+    aspect-ratio: 1/1;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     cursor: pointer;
     transition: transform 0.1s;
     text-align: center;
+    position: relative;
 }
 .tile:active { transform: scale(0.96); background: #2c2c2c; }
-.tile span { font-size: 2.5rem; margin-bottom: 10px; }
-.tile h3 { margin: 0; font-size: 1rem; font-weight: 500; }
+.tile span { font-size: 2rem; margin-bottom: 8px; }
+.tile h3 { margin: 0; font-size: 0.9rem; font-weight: 500; }
 .tile.wide { grid-column: span 2; aspect-ratio: auto; padding: 20px; align-items: flex-start; text-align: left; }
 
-/* Module Layouts */
-.module-container { padding: 15px; }
-.back-btn { background: none; border: none; color: var(--primary); font-size: 1rem; cursor: pointer; margin-bottom: 10px; display: inline-flex; align-items: center; }
+/* Kalender Fixes */
+#calendar-wrapper { background: var(--card-bg); border-radius: 12px; overflow: hidden; margin-top: 10px; }
+.cal-grid { 
+    display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
+    gap: 2px; 
+    padding: 10px; 
+    background: var(--card-bg); 
+}
+.cal-day { 
+    aspect-ratio: 1/1; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start;
+    padding-top: 5px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.cal-day:hover { background: #333; }
+.cal-day.today { border: 1px solid var(--primary); color: var(--primary); font-weight: bold; }
 
-/* Listen Items */
+/* Listen & Tasks */
+.module-container { padding: 15px; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
 .list-item {
     background: var(--card-bg);
     margin-bottom: 10px;
@@ -78,31 +98,13 @@ nav { display: none; } /* Wir nutzen jetzt das Kachel-Dashboard */
     align-items: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-.task-info strong { display: block; margin-bottom: 4px; }
-
-/* Buttons & Inputs */
-input, select {
-    background: #2c2c2c;
-    border: 1px solid #444;
-    color: white;
-    padding: 12px;
-    border-radius: 8px;
-    width: 100%;
-    box-sizing: border-box;
-    margin-bottom: 8px;
-}
-button.primary {
-    background: var(--primary);
-    color: black;
-    font-weight: bold;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    width: 100%;
-    margin-top: 10px;
+.task-done-animation {
+    transform: scale(0.95);
+    opacity: 0.5;
+    transition: all 0.3s ease;
 }
 
-/* Check Button Animation */
+/* Check Button Logic */
 .check-btn {
     width: 44px; height: 44px;
     border-radius: 50%;
@@ -111,35 +113,25 @@ button.primary {
     color: var(--secondary);
     font-size: 1.2rem;
     cursor: pointer;
-    transition: all 0.3s ease;
     display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
 }
-/* Wenn einmal geklickt: Rotes Fragezeichen */
 .check-btn.confirm-mode {
     border-color: var(--danger);
     color: var(--danger);
-    transform: rotate(180deg);
+    animation: shake 0.3s;
 }
+@keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-2px) rotate(10deg); } 75% { transform: translateX(2px) rotate(-10deg); } 100% { transform: translateX(0); } }
 
-/* Voting Styles */
-.vote-card { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #555; }
-.vote-card.status-yes { border-left-color: var(--secondary); }
-.vote-card.status-no { border-left-color: var(--danger); }
-.vote-card.status-veto { border-left-color: var(--veto); border: 2px solid var(--veto); }
-.vote-bars { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0; background: #333; }
-.bar-yes { background: var(--secondary); height: 100%; }
-.bar-no { background: var(--danger); height: 100%; }
-.vote-actions { display: flex; gap: 5px; justify-content: space-between; margin-top: 10px; }
-.vote-btn { flex: 1; padding: 8px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
-.btn-yes { background: #003d33; color: var(--secondary); border: 1px solid var(--secondary); }
-.btn-no { background: #3e000c; color: var(--danger); border: 1px solid var(--danger); }
-.btn-veto { background: #331e00; color: var(--veto); border: 1px solid var(--veto); max-width: 60px; font-size: 0.8rem; }
+/* Soda Module */
+.soda-counter { font-size: 4rem; font-weight: bold; margin: 20px 0; color: var(--secondary); }
+.soda-controls { display: flex; gap: 20px; align-items: center; justify-content: center; width: 100%; }
+.soda-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 2rem; border: none; cursor: pointer; }
+.btn-inc { background: var(--secondary); color: black; }
+.btn-dec { background: #333; color: white; }
 
-/* Kalender */
-.cal-day { background: #252525; color: white; border: none; }
-.cal-day.today { border: 1px solid var(--primary); color: var(--primary); background: #2f2f2f; }
-.day-name { color: var(--text-muted); }
-
-/* Modal */
-.modal-content { background: var(--card-bg); color: white; border: 1px solid #333; }
-.ranking-detail-row { font-size: 0.85rem; padding: 5px 0; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+/* Modal & Inputs */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+.modal-content { background: var(--card-bg); padding: 20px; border-radius: 12px; width: 85%; max-width: 350px; display: flex; flex-direction: column; gap: 10px; }
+input, select { background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+button.primary { background: var(--primary); color: black; font-weight: bold; border: none; padding: 12px; border-radius: 8px; width: 100%; }
