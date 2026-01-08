@@ -7,11 +7,7 @@ const App = {
             try { this.user = JSON.parse(savedUser); this.showDashboard(); } 
             catch (e) { localStorage.removeItem('wg_user'); }
         }
-
-        // Lade Notification Status aus Speicher
-        const notifEnabled = localStorage.getItem('wg_notif_enabled') === 'true';
-        // Wir setzen die Checkbox erst, wenn das Modal geöffnet wird, 
-        // aber wir merken uns den Status.
+        // Notification State ist nur für UI relevant, wir laden ihn beim Öffnen des Modals
     },
 
     async login() {
@@ -40,10 +36,10 @@ const App = {
     },
 
     showDashboard() {
-        // Schließe alle Modals
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('settings-btn').style.display = 'block';
+        const settBtn = document.getElementById('settings-btn');
+        if(settBtn) settBtn.style.display = 'block';
         
         const header = document.getElementById('user-info');
         header.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
@@ -65,7 +61,7 @@ const App = {
                 </div>
             </div>
             <div style="padding: 15px;">
-                <h3 style="margin-bottom:10px; color:var(--text-muted);">Kalender</h3>
+                <h3 style="margin-bottom:10px; color:var(--text-muted);">Kalender & Müll</h3>
                 <div id="calendar-wrapper"></div>
             </div>
         `;
@@ -74,17 +70,18 @@ const App = {
     },
 
     loadModule(moduleName) {
-        document.getElementById('settings-btn').style.display = 'none';
+        const settBtn = document.getElementById('settings-btn');
+        if(settBtn) settBtn.style.display = 'none';
+        
         const container = document.getElementById('app-container');
         
-        // ZURÜCK BUTTON FIX: Mehr Padding, Flexbox Zentrierung, Klickbarer Bereich
+        // ZURÜCK BUTTON: Inline Styles für maximale Sicherheit
         const shell = (title, id) => `
-            <div class="module-container">
-                <div style="padding-bottom: 15px;">
-                    <button class="back-btn" onclick="App.showDashboard()">
-                        <span style="font-size:1.5rem; margin-right:5px;">❮</span> Zurück
-                    </button>
-                </div>
+            <div class="module-container" style="padding-top: 10px;">
+                <button onclick="App.showDashboard()" 
+                    style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; padding:10px 0; font-weight:bold; position:relative; z-index:9999;">
+                    <span style="font-size:1.4rem; margin-right:5px;">❮</span> Zurück
+                </button>
                 <h2 style="margin-bottom:15px;">${title}</h2>
                 <div id="${id}">Lade...</div>
             </div>
@@ -101,23 +98,18 @@ const App = {
     toggleSettings() {
         const modal = document.getElementById('settings-modal');
         modal.style.display = 'flex';
-        
-        // Checkbox Status setzen
-        const cb = document.getElementById('sett-notif');
-        cb.checked = localStorage.getItem('wg_notif_enabled') === 'true';
+        // Checkbox aus LocalStorage setzen
+        const cb = document.querySelector('#settings-modal input[type="checkbox"]');
+        if(cb) cb.checked = (localStorage.getItem('wg_notif_enabled') === 'true');
     },
 
     toggleNotifications() {
-        const cb = document.getElementById('sett-notif');
+        const cb = document.querySelector('#settings-modal input[type="checkbox"]');
         const isEnabled = cb.checked;
+        localStorage.setItem('wg_notif_enabled', isEnabled); // Speichern!
         
-        // Speichern
-        localStorage.setItem('wg_notif_enabled', isEnabled);
-
         if (isEnabled && "Notification" in window) {
-            Notification.requestPermission().then(perm => {
-                if (perm === "granted") new Notification("Benachrichtigungen aktiviert!");
-            });
+            Notification.requestPermission();
         }
     }
 };
