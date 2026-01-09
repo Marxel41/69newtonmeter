@@ -2,24 +2,20 @@ const App = {
     user: null,
 
     init() {
-        // App global verfügbar machen
         window.App = this; 
         
-        // 1. Event Listener für Login-Buttons hinzufügen
         const loginBtn = document.getElementById('login-btn');
         if(loginBtn) loginBtn.addEventListener('click', () => this.login());
         
         const guestBtn = document.getElementById('guest-btn');
         if(guestBtn) guestBtn.addEventListener('click', () => this.enterGuestMode());
 
-        // 2. Settings Checkbox
         const cb = document.querySelector('#settings-modal input[type="checkbox"]');
         if(cb) {
             cb.checked = (localStorage.getItem('wg_notif_enabled') === 'true');
             cb.addEventListener('change', () => this.toggleNotifications());
         }
 
-        // 3. Auto-Login prüfen
         const savedUser = localStorage.getItem('wg_user');
         if (savedUser) {
             try { this.user = JSON.parse(savedUser); this.showDashboard(); } 
@@ -55,7 +51,7 @@ const App = {
         document.getElementById('login-screen').style.display = 'none';
         const container = document.getElementById('app-container');
         
-        // Header anpassen für Gäste (Hier brauchen wir einen speziellen Zurück-Button zum Login)
+        // Header für Gäste: Gleicher Stil wie Dashboard, aber anderer Text/Funktion
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
 
@@ -64,13 +60,14 @@ const App = {
                 <button onclick="location.reload()" style="${btnStyle}">
                     <span style="font-size: 1.4rem; margin-right: 8px;">❮</span> Zum Login
                 </button>
-                <span style="margin-left: 15px; color: #888;">Gästebuch</span>
+                <span style="margin-left: 15px; color: #888; border-left: 1px solid #555; padding-left: 15px;">Gästebuch</span>
             </div>
-            <div id="guest-view"></div>
+            <div class="module-container" style="padding-top: 10px;">
+                <div id="guest-view">Lade...</div>
+            </div>
         `;
         
         if(typeof GuestbookModule !== 'undefined') {
-            // true = Öffentlicher Modus (Formular + Liste)
             GuestbookModule.init('guest-view', true);
         }
     },
@@ -85,7 +82,7 @@ const App = {
         if(sBtn) sBtn.style.display = 'block';
         
         const userInfo = document.getElementById('user-info');
-        if (userInfo) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
+        if (userInfo && this.user) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
         
         const c = document.getElementById('app-container');
         c.innerHTML = `
@@ -116,8 +113,7 @@ const App = {
         
         const container = document.getElementById('app-container');
         
-        // STANDARD Header für ALLE Module (auch Gästebuch)
-        // Inline Styles mit hohem z-index und pointer-events
+        // STANDARD Header für ALLE Module
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
         
@@ -140,7 +136,7 @@ const App = {
         else if (moduleName === 'ranking') { container.innerHTML = shell('Ranking', 'rank-cont'); TasksModule.initRanking('rank-cont'); }
         else if (moduleName === 'soda') { container.innerHTML = shell('SodaStream', 'soda-cont'); SodaModule.init('soda-cont'); }
         else if (moduleName === 'guestbook') { 
-            // Hier rufen wir es jetzt mit false auf (nicht öffentlich/nicht gast), d.h. Formular ausblenden
+            // WICHTIG: Hier jetzt auch standard Shell und Parameter false (nur Liste für Intern)
             container.innerHTML = shell('Gästebuch', 'gb-cont'); 
             GuestbookModule.init('gb-cont', false); 
         }
