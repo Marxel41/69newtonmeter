@@ -48,10 +48,12 @@ const App = {
     },
 
     enterGuestMode() {
-        document.getElementById('login-screen').style.display = 'none';
+        const loginScreen = document.getElementById('login-screen');
+        if(loginScreen) loginScreen.style.display = 'none';
+        
         const container = document.getElementById('app-container');
         
-        // Header für Gäste: Gleicher Stil wie Dashboard, aber anderer Text/Funktion
+        // Header für Gäste
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
 
@@ -75,8 +77,12 @@ const App = {
     logout() { localStorage.removeItem('wg_user'); location.reload(); },
 
     showDashboard() {
+        // Modals schließen
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        document.getElementById('login-screen').style.display = 'none';
+        
+        // Login Screen sicher ausblenden (falls noch vorhanden)
+        const loginScreen = document.getElementById('login-screen');
+        if(loginScreen) loginScreen.style.display = 'none';
         
         const sBtn = document.getElementById('settings-btn');
         if(sBtn) sBtn.style.display = 'block';
@@ -85,6 +91,8 @@ const App = {
         if (userInfo && this.user) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
         
         const c = document.getElementById('app-container');
+        
+        // Dashboard Kacheln rendern
         c.innerHTML = `
             <div class="dashboard-grid">
                 <div class="tile" onclick="window.App.loadModule('todo')"><span>📌</span><h3>To-Dos</h3></div>
@@ -113,7 +121,7 @@ const App = {
         
         const container = document.getElementById('app-container');
         
-        // STANDARD Header für ALLE Module
+        // Inline Styles für garantierte Sichtbarkeit des Headers
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
         
@@ -136,7 +144,6 @@ const App = {
         else if (moduleName === 'ranking') { container.innerHTML = shell('Ranking', 'rank-cont'); TasksModule.initRanking('rank-cont'); }
         else if (moduleName === 'soda') { container.innerHTML = shell('SodaStream', 'soda-cont'); SodaModule.init('soda-cont'); }
         else if (moduleName === 'guestbook') { 
-            // WICHTIG: Hier jetzt auch standard Shell und Parameter false (nur Liste für Intern)
             container.innerHTML = shell('Gästebuch', 'gb-cont'); 
             GuestbookModule.init('gb-cont', false); 
         }
