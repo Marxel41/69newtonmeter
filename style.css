@@ -1,4 +1,4 @@
-/* VERSION: 7.0 - RESTORED + GUESTBOOK */
+/* VERSION: 7.1 - LOGIN FIX + GUESTBOOK */
 
 /* --- ORIGINAL APP STYLES (V6.0 restored) --- */
 :root {
@@ -35,6 +35,17 @@ header {
     height: 60px;
 }
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 5px; }
+
+/* LOGIN SCREEN FIX */
+#login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px 20px;
+    gap: 15px;
+    position: relative;
+    z-index: 10; /* Damit es sicher klickbar ist */
+}
 
 /* Dashboard */
 .dashboard-grid {
