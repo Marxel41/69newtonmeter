@@ -11,7 +11,7 @@ const SodaModule = {
                 <!-- Loading Platzhalter -->
                 <div id="soda-loading" style="margin:40px 0; color:#666;">Verbinde...</div>
 
-                <!-- Inhalt (zuerst unsichtbar) -->
+                <!-- Inhalt -->
                 <div id="soda-content" style="display:none;">
                     <div class="soda-counter" id="soda-val">?</div>
                     <div class="soda-controls">
@@ -51,6 +51,7 @@ const SodaModule = {
                 // UI Freischalten
                 document.getElementById('soda-loading').style.display = 'none';
                 document.getElementById('soda-content').style.display = 'block';
+                this.setLoading(false); // Sicherstellen, dass Buttons aktiv sind
                 this.updateUI();
             } else {
                 document.getElementById('soda-loading').innerText = "Fehler: Tabelle SodaState nicht gefunden.";
@@ -61,14 +62,19 @@ const SodaModule = {
             if(r2.status === 'success' && r2.data.length > 0) {
                 hDiv.innerHTML = "";
                 r2.data.reverse().forEach(row => {
-                    // Datum cleanen
                     let dStr = '-';
                     try { dStr = new Date(row.date).toLocaleDateString(); } catch(e){}
                     
+                    // Filter für Liter Anzeige: Wenn es wie ein Datum aussieht, ignorieren oder fixen
+                    let litersDisplay = row.liters;
+                    if(typeof row.liters === 'string' && row.liters.includes('T')) {
+                        litersDisplay = "Fehler (Spalten?)"; 
+                    }
+
                     hDiv.innerHTML += `
                         <div style="padding:8px 0; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
                             <span>${dStr} <small style="color:#888">(${row.days} Tage)</small></span>
-                            <span>${row.liters || '?'}L / ${row.cost || '?'}</span>
+                            <span>${litersDisplay}L / ${row.cost || '?'}</span>
                         </div>`;
                 });
             } else {
@@ -81,26 +87,29 @@ const SodaModule = {
     },
 
     updateUI() {
-        document.getElementById('soda-val').innerText = this.count;
+        const valEl = document.getElementById('soda-val');
+        if(valEl) valEl.innerText = this.count;
+        
         if (this.startDate) {
             const d = new Date(this.startDate);
             const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString() : '-';
-            document.getElementById('soda-info').innerText = `Gestartet am: ${dateStr}`;
+            const infoEl = document.getElementById('soda-info');
+            if(infoEl) infoEl.innerText = `Gestartet am: ${dateStr}`;
         }
     },
 
     setLoading(isLoading) {
-        document.getElementById('btn-inc').disabled = isLoading;
-        document.getElementById('btn-dec').disabled = isLoading;
-        document.getElementById('btn-reset').disabled = isLoading;
-        if(isLoading) document.getElementById('soda-val').style.opacity = 0.5;
-        else document.getElementById('soda-val').style.opacity = 1;
+        const els = ['btn-inc', 'btn-dec', 'btn-reset'];
+        els.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.disabled = isLoading;
+        });
+        const valEl = document.getElementById('soda-val');
+        if(valEl) valEl.style.opacity = isLoading ? 0.5 : 1;
     },
 
     async update(mode) {
-        // Optimistic UI, aber Buttons sperren
         this.setLoading(true);
-        
         if(mode === 'inc') this.count++;
         if(mode === 'dec' && this.count > 0) this.count--;
         this.updateUI();
@@ -112,13 +121,14 @@ const SodaModule = {
     async finish() {
         if(!confirm("Wirklich resetten?")) return;
         
-        this.setLoading(true);
+        this.setLoading(true); // Buttons sperren
         const result = await API.post('soda_update', { mode: 'reset' });
         
         if(result.status === 'success') {
             this.count = 0;
             this.startDate = new Date().toISOString();
             await this.loadState(); // Alles neu laden für History
+            // Hier wird setLoading(false) durch loadState aufgerufen
         } else {
             alert("Reset fehlgeschlagen: " + result.message);
             this.setLoading(false);
