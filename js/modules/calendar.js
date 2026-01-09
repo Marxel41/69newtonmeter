@@ -35,8 +35,9 @@ const CalendarModule = {
             // 1. Manuelle Events
             if(r1.status === 'success') this.events.push(...r1.data);
             
-            // 2. Tasks & Putzplan (Filter: Alles was offen ist UND Shopping Liste)
+            // 2. Tasks & Putzplan
             if(r2.status === 'success') {
+                // Wir filtern alles was NICHT Status 'done' hat (also 'open')
                 const tasks = r2.data.filter(t => t.status === 'open');
                 this.events.push(...tasks);
             }
@@ -98,7 +99,7 @@ const CalendarModule = {
         return this.events.filter(e => {
             if (!e.date) return false;
             // Wir nutzen die Datum-String Logik um Zeitzonen zu ignorieren
-            const eDateStr = e.date.substring(0, 10); // YYYY-MM-DD
+            const eDateStr = e.date.substring(0, 10); 
             
             if ((!e.recurrence || e.recurrence === 'none') && eDateStr === targetDateStr) return true;
             
@@ -114,6 +115,15 @@ const CalendarModule = {
                 if (e.recurrence === 'weekly') return tDateObj.getDay() === eDateObj.getDay();
                 if (e.recurrence === 'monthly') return tD === eD;
                 if (e.recurrence === 'yearly') return tD === eD && tM === eM;
+                if (e.recurrence === 'daily') return true;
+                if (e.recurrence === '3days') {
+                    const diffDays = Math.floor((tDateObj - eDateObj) / (1000 * 60 * 60 * 24));
+                    return diffDays % 3 === 0;
+                }
+                if (e.recurrence === '5days') {
+                    const diffDays = Math.floor((tDateObj - eDateObj) / (1000 * 60 * 60 * 24));
+                    return diffDays % 5 === 0;
+                }
             }
             return false;
         });
