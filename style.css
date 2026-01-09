@@ -1,4 +1,4 @@
-/* VERSION: 5.0 - Voting Border & Cal Fixes */
+/* VERSION: 6.0 - Yellow Check & Soda Fixes */
 :root {
     --bg-color: #121212;
     --card-bg: #1e1e1e;
@@ -7,6 +7,7 @@
     --text-main: #e0e0e0;
     --text-muted: #a0a0a0;
     --danger: #cf6679;
+    --warn: #ffca28; /* Gelb für Wartestatus */
     --veto: #ff9800;
 }
 
@@ -58,21 +59,14 @@ header {
 .tile h3 { margin: 0; font-size: 0.9rem; font-weight: 500; }
 .tile.wide { grid-column: span 2; aspect-ratio: auto; flex-direction: row; justify-content: space-between; padding: 20px; }
 
-/* --- VOTING STYLES (FIX) --- */
-.vote-card { 
-    background: var(--card-bg); 
-    padding: 15px; 
-    border-radius: 10px; 
-    margin-bottom: 15px; 
-    border-left: 5px solid #555; /* Default Grau */
-}
-.vote-card.status-yes { border-left-color: var(--secondary); border: 1px solid var(--secondary); box-shadow: 0 0 5px rgba(3, 218, 198, 0.2); }
-.vote-card.status-no { border-left-color: var(--danger); border: 1px solid var(--danger); box-shadow: 0 0 5px rgba(207, 102, 121, 0.2); }
-.vote-card.status-veto { border-left-color: var(--veto); border: 2px solid var(--veto); box-shadow: 0 0 8px rgba(255, 152, 0, 0.3); }
-
+/* Voting Styles */
+.vote-card { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #555; }
+.vote-card.status-yes { border-left-color: var(--secondary); border: 1px solid var(--secondary); }
+.vote-card.status-no { border-left-color: var(--danger); border: 1px solid var(--danger); }
+.vote-card.status-veto { border-left-color: var(--veto); border: 2px solid var(--veto); }
 .vote-bars { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0; background: #333; }
-.bar-yes { background: var(--secondary); height: 100%; transition: width 0.3s; }
-.bar-no { background: var(--danger); height: 100%; transition: width 0.3s; }
+.bar-yes { background: var(--secondary); height: 100%; }
+.bar-no { background: var(--danger); height: 100%; }
 .vote-actions { display: flex; gap: 5px; justify-content: space-between; margin-top: 10px; }
 .vote-btn { flex: 1; padding: 8px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
 .btn-yes { background: #003d33; color: var(--secondary); border: 1px solid var(--secondary); }
@@ -80,35 +74,14 @@ header {
 .btn-veto { background: #331e00; color: var(--veto); border: 1px solid var(--veto); max-width: 60px; font-size: 0.8rem; }
 
 /* Kalender */
-.cal-grid {
-    display: grid !important;
-    grid-template-columns: repeat(7, 1fr) !important;
-    gap: 4px;
-    background: var(--card-bg);
-    padding: 10px;
-    border-radius: 0 0 12px 12px;
-}
-.cal-day {
-    aspect-ratio: 1/1;
-    text-align: center;
-    padding: 5px;
-    position: relative;
-    font-size: 0.9rem;
-    cursor: pointer;
-    background: #252525;
-    border-radius: 4px;
-}
+.cal-grid { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; gap: 4px; background: var(--card-bg); padding: 10px; border-radius: 0 0 12px 12px; }
+.cal-day { aspect-ratio: 1/1; text-align: center; padding: 5px; position: relative; font-size: 0.9rem; cursor: pointer; background: #252525; border-radius: 4px; }
 .cal-day.today { border: 1px solid var(--primary); color: var(--primary); }
 .day-name { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding-bottom: 5px; }
 .dots { display: flex; justify-content: center; gap: 2px; margin-top: 2px; flex-wrap: wrap; }
 .dot { width: 5px; height: 5px; border-radius: 50%; }
 
-/* UI Elemente */
-.module-container { padding: 15px; animation: fadeIn 0.3s; }
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-
-.list-item { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-
+/* Soda & Listen */
 .soda-counter { font-size: 4rem; font-weight: bold; margin: 20px 0; color: var(--secondary); }
 .soda-controls { display: flex; gap: 20px; justify-content: center; }
 .soda-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 2rem; border: none; cursor: pointer; transition: opacity 0.2s; }
@@ -116,10 +89,29 @@ header {
 .btn-inc { background: var(--secondary); color: black; }
 .btn-dec { background: #333; color: white; }
 
-/* Modals */
+.list-item { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+/* TASK CHECK BUTTON NEU */
+.check-btn { 
+    width: 44px; height: 44px; border-radius: 50%; 
+    border: 2px solid var(--secondary); 
+    background: transparent; color: var(--secondary); 
+    font-size: 1.2rem; cursor: pointer; 
+    display: flex; align-items: center; justify-content: center; 
+    transition: all 0.2s; 
+}
+/* Gelber Wartezustand */
+.check-btn.confirm-wait { 
+    border-color: var(--warn); color: var(--warn); 
+    background: rgba(255, 202, 40, 0.1);
+    transform: scale(1.1);
+}
+
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; }
 .modal-content { background: var(--card-bg); padding: 30px 20px 20px 20px; border-radius: 12px; width: 85%; max-width: 350px; position: relative; max-height: 80vh; overflow-y: auto; }
 .close-modal-x { position: absolute; top: 5px; right: 10px; font-size: 2rem; color: #666; cursor: pointer; border: none; background: none; z-index: 2001; }
 
 input, select { background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
 button.primary { background: var(--primary); color: black; font-weight: bold; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; }
+.module-container { padding: 15px; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
