@@ -1,3 +1,4 @@
+/* VERSION: 5.0 - Voting Border & Cal Fixes */
 :root {
     --bg-color: #121212;
     --card-bg: #1e1e1e;
@@ -6,6 +7,7 @@
     --text-main: #e0e0e0;
     --text-muted: #a0a0a0;
     --danger: #cf6679;
+    --veto: #ff9800;
 }
 
 body {
@@ -56,7 +58,28 @@ header {
 .tile h3 { margin: 0; font-size: 0.9rem; font-weight: 500; }
 .tile.wide { grid-column: span 2; aspect-ratio: auto; flex-direction: row; justify-content: space-between; padding: 20px; }
 
-/* Kalender GRID FIX */
+/* --- VOTING STYLES (FIX) --- */
+.vote-card { 
+    background: var(--card-bg); 
+    padding: 15px; 
+    border-radius: 10px; 
+    margin-bottom: 15px; 
+    border-left: 5px solid #555; /* Default Grau */
+}
+.vote-card.status-yes { border-left-color: var(--secondary); border: 1px solid var(--secondary); box-shadow: 0 0 5px rgba(3, 218, 198, 0.2); }
+.vote-card.status-no { border-left-color: var(--danger); border: 1px solid var(--danger); box-shadow: 0 0 5px rgba(207, 102, 121, 0.2); }
+.vote-card.status-veto { border-left-color: var(--veto); border: 2px solid var(--veto); box-shadow: 0 0 8px rgba(255, 152, 0, 0.3); }
+
+.vote-bars { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0; background: #333; }
+.bar-yes { background: var(--secondary); height: 100%; transition: width 0.3s; }
+.bar-no { background: var(--danger); height: 100%; transition: width 0.3s; }
+.vote-actions { display: flex; gap: 5px; justify-content: space-between; margin-top: 10px; }
+.vote-btn { flex: 1; padding: 8px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
+.btn-yes { background: #003d33; color: var(--secondary); border: 1px solid var(--secondary); }
+.btn-no { background: #3e000c; color: var(--danger); border: 1px solid var(--danger); }
+.btn-veto { background: #331e00; color: var(--veto); border: 1px solid var(--veto); max-width: 60px; font-size: 0.8rem; }
+
+/* Kalender */
 .cal-grid {
     display: grid !important;
     grid-template-columns: repeat(7, 1fr) !important;
@@ -85,9 +108,11 @@ header {
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
 .list-item { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
 .soda-counter { font-size: 4rem; font-weight: bold; margin: 20px 0; color: var(--secondary); }
 .soda-controls { display: flex; gap: 20px; justify-content: center; }
-.soda-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 2rem; border: none; cursor: pointer; }
+.soda-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 2rem; border: none; cursor: pointer; transition: opacity 0.2s; }
+.soda-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .btn-inc { background: var(--secondary); color: black; }
 .btn-dec { background: #333; color: white; }
 
