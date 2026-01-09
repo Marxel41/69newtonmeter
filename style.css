@@ -1,6 +1,8 @@
-/* VERSION: 7.1 - LOGIN FIX + GUESTBOOK */
+/* VERSION: 8.0 - LOGIN RESCUE + GUESTBOOK */
 
-/* --- ORIGINAL APP STYLES (V6.0 restored) --- */
+/* =========================================
+   1. CORE APP STYLES (Das funktionierende System)
+   ========================================= */
 :root {
     --bg-color: #121212;
     --card-bg: #1e1e1e;
@@ -9,7 +11,7 @@
     --text-main: #e0e0e0;
     --text-muted: #a0a0a0;
     --danger: #cf6679;
-    --warn: #ffca28; /* Gelb für Wartestatus */
+    --warn: #ffca28; /* Gelb für Wartestatus (Tasks) */
     --veto: #ff9800;
 }
 
@@ -36,7 +38,7 @@ header {
 }
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 5px; }
 
-/* LOGIN SCREEN FIX */
+/* --- LOGIN SCREEN FIX (Lebenswichtig!) --- */
 #login-screen {
     display: flex;
     flex-direction: column;
@@ -44,10 +46,13 @@ header {
     padding: 50px 20px;
     gap: 15px;
     position: relative;
-    z-index: 10; /* Damit es sicher klickbar ist */
+    /* Extrem hoch, damit Header/Modals es nicht verdecken können */
+    z-index: 5000; 
+    background-color: var(--bg-color); /* Damit nichts durchscheint */
+    min-height: 100vh;
 }
 
-/* Dashboard */
+/* Dashboard Grid */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -86,7 +91,7 @@ header {
 .btn-no { background: #3e000c; color: var(--danger); border: 1px solid var(--danger); }
 .btn-veto { background: #331e00; color: var(--veto); border: 1px solid var(--veto); max-width: 60px; font-size: 0.8rem; }
 
-/* Kalender */
+/* Kalender Styles */
 .cal-grid { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; gap: 4px; background: var(--card-bg); padding: 10px; border-radius: 0 0 12px 12px; }
 .cal-day { aspect-ratio: 1/1; text-align: center; padding: 5px; position: relative; font-size: 0.9rem; cursor: pointer; background: #252525; border-radius: 4px; }
 .cal-day.today { border: 1px solid var(--primary); color: var(--primary); }
@@ -104,7 +109,7 @@ header {
 
 .list-item { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-/* TASK CHECK BUTTON NEU */
+/* TASK CHECK BUTTON (Gelber Haken Logik) */
 .check-btn { 
     width: 44px; height: 44px; border-radius: 50%; 
     border: 2px solid var(--secondary); 
@@ -113,40 +118,49 @@ header {
     display: flex; align-items: center; justify-content: center; 
     transition: all 0.2s; 
 }
-/* Gelber Wartezustand */
 .check-btn.confirm-wait { 
     border-color: var(--warn); color: var(--warn); 
     background: rgba(255, 202, 40, 0.1);
     transform: scale(1.1);
 }
 
+/* Modals */
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; }
 .modal-content { background: var(--card-bg); padding: 30px 20px 20px 20px; border-radius: 12px; width: 85%; max-width: 350px; position: relative; max-height: 80vh; overflow-y: auto; }
 .close-modal-x { position: absolute; top: 5px; right: 10px; font-size: 2rem; color: #666; cursor: pointer; border: none; background: none; z-index: 2001; }
 
 input, select { background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-button.primary { background: var(--primary); color: black; font-weight: bold; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; }
+button.primary { background: var(--primary); color: black; font-weight: bold; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; pointer-events: auto; }
 .module-container { padding: 15px; animation: fadeIn 0.3s; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
 
-/* --- GÄSTEBUCH SPECIAL STYLES (1:1 Übernahme) --- */
-/* Wir nutzen .gb-wrapper als Scope, damit es nicht den Rest der App stört */
+/* =========================================
+   2. GÄSTEBUCH STYLES (Dein 1:1 Design)
+   ========================================= */
+/* Wir nutzen .gb-wrapper, damit das "poppige" Design nicht den Dark Mode kaputt macht */
 
 .gb-wrapper {
     font-family: 'Poppins', sans-serif;
-    /* Der schicke Gradient Hintergrund */
+    /* Dein schicker Gradient */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #333;
     padding: 20px;
     line-height: 1.6;
-    min-height: 80vh; /* Füllt den Platz */
-    border-radius: 12px;
+    min-height: 100vh; /* Füllt den Screen */
+    
+    /* Layout Zentrierung */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Negativ-Margin um Padding vom Container auszugleichen */
+    margin: -15px; 
+    padding-top: 60px; /* Platz für den Zurück-Button oben */
 }
 
 .gb-wrapper h1 { 
     text-align: center; 
-    color: #fff; /* Angepasst für Kontrast auf Gradient */
+    color: #fff; 
     margin-bottom: 5px; 
     font-weight: 600;
 }
@@ -159,15 +173,16 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     font-weight: 300;
 }
 
-/* Der Formular Container - Glassmorphism Light */
+/* Glassmorphism Container */
 .gb-form-container {
-    width: 100%;
+    width: 90%;
+    max-width: 500px;
     background: rgba(255, 255, 255, 0.95); 
-    padding: 40px;
+    padding: 30px;
     border-radius: 20px; 
     box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     backdrop-filter: blur(10px);
-    box-sizing: border-box; /* Wichtig für Layout */
+    box-sizing: border-box;
 }
 
 .gb-wrapper .form-row { margin-bottom: 25px; }
@@ -180,7 +195,7 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     font-size: 0.95rem;
 }
 
-/* Inputs im Gästebuch überschreiben die Dark Mode Inputs */
+/* Inputs im Gästebuch (Müssen Dark Mode überschreiben) */
 .gb-wrapper input[type="text"], 
 .gb-wrapper input[type="email"], 
 .gb-wrapper textarea,
@@ -194,7 +209,7 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     background: #f7fafc !important; 
     color: #2d3748 !important;
     font-family: inherit;
-    margin-bottom: 0; /* Reset */
+    margin-bottom: 0; 
 }
 
 .gb-wrapper input:focus, 
@@ -206,7 +221,7 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-/* Custom Range Slider */
+/* Range Slider */
 .gb-wrapper input[type="range"] { 
     -webkit-appearance: none;
     width: 100%; 
@@ -215,7 +230,6 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     background: transparent !important;
     border: none !important;
 }
-
 .gb-wrapper input[type="range"]::-webkit-slider-runnable-track {
     width: 100%;
     height: 8px;
@@ -223,7 +237,6 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     background: #edf2f7;
     border-radius: 5px;
 }
-
 .gb-wrapper input[type="range"]::-webkit-slider-thumb {
     height: 24px;
     width: 24px;
@@ -236,7 +249,7 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     transition: transform 0.1s;
 }
 
-/* Button im Gästebuch */
+/* Gästebuch Button */
 .gb-wrapper button.gb-btn {
     background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
     color: white; 
@@ -255,24 +268,10 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     box-shadow: 0 10px 20px rgba(118, 75, 162, 0.3);
 }
 
-/* Hilfstexte */
-.range-labels { 
-    display:flex; 
-    justify-content:space-between; 
-    font-size:0.8rem; 
-    color:#a0aec0; 
-    margin-top: 8px;
-    font-weight: 500;
-}
+.range-labels { display:flex; justify-content:space-between; font-size:0.8rem; color:#a0aec0; margin-top: 8px; font-weight: 500; }
+.emoji-feedback { font-size: 1.8rem; vertical-align: middle; margin-left: 10px; display: inline-block; }
 
-.emoji-feedback { 
-    font-size: 1.8rem; 
-    vertical-align: middle; 
-    margin-left: 10px; 
-    display: inline-block;
-}
-
-/* Ergebnisse Liste Styles */
+/* Eintrags-Liste im Gästebuch */
 .gb-entry-card {
     background: white;
     padding: 15px;
@@ -281,6 +280,8 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-left: 4px solid #667eea;
     color: #4a5568;
+    text-align: left;
+    width: 100%;
 }
 .gb-entry-header { display: flex; justify-content: space-between; font-weight: bold; color: #2d3748; margin-bottom: 5px; }
 .gb-entry-meta { font-size: 0.8rem; color: #a0aec0; margin-top: 5px; }
