@@ -1,8 +1,6 @@
-/* VERSION: 8.0 - LOGIN RESCUE + GUESTBOOK */
+/* VERSION: 9.0 - CLICK FIX */
 
-/* =========================================
-   1. CORE APP STYLES (Das funktionierende System)
-   ========================================= */
+/* CORE APP STYLES */
 :root {
     --bg-color: #121212;
     --card-bg: #1e1e1e;
@@ -11,7 +9,7 @@
     --text-main: #e0e0e0;
     --text-muted: #a0a0a0;
     --danger: #cf6679;
-    --warn: #ffca28; /* Gelb für Wartestatus (Tasks) */
+    --warn: #ffca28;
     --veto: #ff9800;
 }
 
@@ -38,18 +36,26 @@ header {
 }
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 5px; }
 
-/* --- LOGIN SCREEN FIX (Lebenswichtig!) --- */
+/* LOGIN SCREEN - EXTREM WICHTIG */
 #login-screen {
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 50px 20px;
-    gap: 15px;
+    gap: 20px; /* Mehr Abstand */
     position: relative;
-    /* Extrem hoch, damit Header/Modals es nicht verdecken können */
-    z-index: 5000; 
-    background-color: var(--bg-color); /* Damit nichts durchscheint */
+    z-index: 5000; /* Muss über allem liegen */
+    background-color: var(--bg-color);
     min-height: 100vh;
+    pointer-events: auto !important; /* Klicks erzwingen */
+}
+
+/* Login Buttons */
+#login-btn, #guest-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative;
+    z-index: 5001; /* Noch höher als der Screen */
 }
 
 /* Dashboard Grid */
@@ -109,20 +115,9 @@ header {
 
 .list-item { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-/* TASK CHECK BUTTON (Gelber Haken Logik) */
-.check-btn { 
-    width: 44px; height: 44px; border-radius: 50%; 
-    border: 2px solid var(--secondary); 
-    background: transparent; color: var(--secondary); 
-    font-size: 1.2rem; cursor: pointer; 
-    display: flex; align-items: center; justify-content: center; 
-    transition: all 0.2s; 
-}
-.check-btn.confirm-wait { 
-    border-color: var(--warn); color: var(--warn); 
-    background: rgba(255, 202, 40, 0.1);
-    transform: scale(1.1);
-}
+/* Task Check Button */
+.check-btn { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--secondary); background: transparent; color: var(--secondary); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.check-btn.confirm-wait { border-color: var(--warn); color: var(--warn); background: rgba(255, 202, 40, 0.1); transform: scale(1.1); }
 
 /* Modals */
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; }
@@ -134,154 +129,18 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
 .module-container { padding: 15px; animation: fadeIn 0.3s; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
-
-/* =========================================
-   2. GÄSTEBUCH STYLES (Dein 1:1 Design)
-   ========================================= */
-/* Wir nutzen .gb-wrapper, damit das "poppige" Design nicht den Dark Mode kaputt macht */
-
-.gb-wrapper {
-    font-family: 'Poppins', sans-serif;
-    /* Dein schicker Gradient */
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #333;
-    padding: 20px;
-    line-height: 1.6;
-    min-height: 100vh; /* Füllt den Screen */
-    
-    /* Layout Zentrierung */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    /* Negativ-Margin um Padding vom Container auszugleichen */
-    margin: -15px; 
-    padding-top: 60px; /* Platz für den Zurück-Button oben */
-}
-
-.gb-wrapper h1 { 
-    text-align: center; 
-    color: #fff; 
-    margin-bottom: 5px; 
-    font-weight: 600;
-}
-
-.gb-wrapper p.subtitle { 
-    text-align: center; 
-    color: #e0e0e0; 
-    margin-bottom: 35px; 
-    margin-top: 0; 
-    font-weight: 300;
-}
-
-/* Glassmorphism Container */
-.gb-form-container {
-    width: 90%;
-    max-width: 500px;
-    background: rgba(255, 255, 255, 0.95); 
-    padding: 30px;
-    border-radius: 20px; 
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-    backdrop-filter: blur(10px);
-    box-sizing: border-box;
-}
-
+/* GÄSTEBUCH STYLES (Dein Design) */
+.gb-wrapper { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; padding: 20px; line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; align-items: center; margin: -15px; padding-top: 60px; }
+.gb-wrapper h1 { text-align: center; color: #fff; margin-bottom: 5px; font-weight: 600; }
+.gb-wrapper p.subtitle { text-align: center; color: #e0e0e0; margin-bottom: 35px; margin-top: 0; font-weight: 300; }
+.gb-form-container { width: 90%; max-width: 500px; background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); backdrop-filter: blur(10px); box-sizing: border-box; }
 .gb-wrapper .form-row { margin-bottom: 25px; }
-
-.gb-wrapper label { 
-    display: block; 
-    font-weight: 600; 
-    margin-bottom: 8px; 
-    color: #4a5568; 
-    font-size: 0.95rem;
-}
-
-/* Inputs im Gästebuch (Müssen Dark Mode überschreiben) */
-.gb-wrapper input[type="text"], 
-.gb-wrapper input[type="email"], 
-.gb-wrapper textarea,
-.gb-wrapper select { 
-    width: 100%; 
-    padding: 14px; 
-    border: 2px solid transparent !important; 
-    border-radius: 12px; 
-    box-sizing: border-box; 
-    font-size: 1rem; 
-    background: #f7fafc !important; 
-    color: #2d3748 !important;
-    font-family: inherit;
-    margin-bottom: 0; 
-}
-
-.gb-wrapper input:focus, 
-.gb-wrapper select:focus, 
-.gb-wrapper textarea:focus {
-    border-color: #667eea !important;
-    background: #fff !important;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-/* Range Slider */
-.gb-wrapper input[type="range"] { 
-    -webkit-appearance: none;
-    width: 100%; 
-    cursor: pointer; 
-    margin-top: 10px;
-    background: transparent !important;
-    border: none !important;
-}
-.gb-wrapper input[type="range"]::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 8px;
-    cursor: pointer;
-    background: #edf2f7;
-    border-radius: 5px;
-}
-.gb-wrapper input[type="range"]::-webkit-slider-thumb {
-    height: 24px;
-    width: 24px;
-    border-radius: 50%;
-    background: #667eea;
-    cursor: pointer;
-    -webkit-appearance: none;
-    margin-top: -8px; 
-    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
-    transition: transform 0.1s;
-}
-
-/* Gästebuch Button */
-.gb-wrapper button.gb-btn {
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    color: white; 
-    width: 100%; 
-    padding: 16px; 
-    border: none;
-    border-radius: 12px; 
-    font-size: 1.1rem; 
-    font-weight: 600; 
-    cursor: pointer; 
-    transition: transform 0.2s, box-shadow 0.3s;
-    margin-top: 10px;
-}
-.gb-wrapper button.gb-btn:hover { 
-    transform: translateY(-2px); 
-    box-shadow: 0 10px 20px rgba(118, 75, 162, 0.3);
-}
-
+.gb-wrapper label { display: block; font-weight: 600; margin-bottom: 8px; color: #4a5568; font-size: 0.95rem; }
+.gb-wrapper input[type="text"], .gb-wrapper textarea, .gb-wrapper select { width: 100%; padding: 14px; border: 2px solid transparent !important; border-radius: 12px; box-sizing: border-box; font-size: 1rem; background: #f7fafc !important; color: #2d3748 !important; font-family: inherit; margin-bottom: 0; }
+.gb-wrapper input:focus, .gb-wrapper select:focus, .gb-wrapper textarea:focus { border-color: #667eea !important; background: #fff !important; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+.gb-wrapper button.gb-btn { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s; margin-top: 10px; }
 .range-labels { display:flex; justify-content:space-between; font-size:0.8rem; color:#a0aec0; margin-top: 8px; font-weight: 500; }
 .emoji-feedback { font-size: 1.8rem; vertical-align: middle; margin-left: 10px; display: inline-block; }
-
-/* Eintrags-Liste im Gästebuch */
-.gb-entry-card {
-    background: white;
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border-left: 4px solid #667eea;
-    color: #4a5568;
-    text-align: left;
-    width: 100%;
-}
+.gb-entry-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 4px solid #667eea; color: #4a5568; text-align: left; width: 100%; }
 .gb-entry-header { display: flex; justify-content: space-between; font-weight: bold; color: #2d3748; margin-bottom: 5px; }
 .gb-entry-meta { font-size: 0.8rem; color: #a0aec0; margin-top: 5px; }
