@@ -27,19 +27,21 @@ const App = {
     logout() { localStorage.removeItem('wg_user'); location.reload(); },
 
     showDashboard() {
-        // UI Reset
+        // Alles ausblenden
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         document.getElementById('login-screen').style.display = 'none';
         
-        // Header anpassen: Back Button WEG, Settings Button HER
-        document.getElementById('nav-back-btn').style.display = 'none';
-        document.getElementById('settings-btn').style.display = 'block';
-        document.getElementById('app-title').innerText = "WG Hub";
+        // Header anpassen (Auf Dashboard zeigen wir das Zahnrad)
+        const settingsBtn = document.getElementById('settings-btn');
+        if(settingsBtn) settingsBtn.style.display = 'block';
         
-        document.getElementById('user-info').innerHTML = `Hi, <strong>${this.user.name}</strong>`;
+        const userInfo = document.getElementById('user-info');
+        if(userInfo) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
         
-        const c = document.getElementById('app-container');
-        c.innerHTML = `
+        const container = document.getElementById('app-container');
+        
+        // Dashboard Kacheln
+        container.innerHTML = `
             <div class="dashboard-grid">
                 <div class="tile" onclick="App.loadModule('todo')"><span>📌</span><h3>To-Dos</h3></div>
                 <div class="tile" onclick="App.loadModule('cleaning')"><span>🧹</span><h3>Putzplan</h3></div>
@@ -47,68 +49,81 @@ const App = {
                 <div class="tile" onclick="App.loadModule('voting')"><span>🗳️</span><h3>Votes</h3></div>
                 <div class="tile" onclick="App.loadModule('soda')"><span>💧</span><h3>Soda</h3></div>
                 <div class="tile wide" onclick="App.loadModule('ranking')">
-                    <div style="display:flex;width:100%;justify-content:space-between;">
+                    <div style="display:flex;width:100%;justify-content:space-between;align-items:center;">
                          <div style="display:flex;align-items:center;"><span>🏆</span><h3 style="margin-left:10px;">Ranking</h3></div>
-                         <small>Details ></small>
+                         <small style="color:#03dac6">Details ></small>
                     </div>
                 </div>
             </div>
             <div style="padding:15px;"><div id="calendar-wrapper"></div></div>
         `;
+        
         if(typeof CalendarModule !== 'undefined') CalendarModule.init('calendar-wrapper');
     },
 
     loadModule(moduleName) {
-        // Header anpassen: Back Button HER, Settings Button WEG
-        document.getElementById('nav-back-btn').style.display = 'block';
-        document.getElementById('settings-btn').style.display = 'none';
+        // Settings Button im Modul ausblenden
+        const settingsBtn = document.getElementById('settings-btn');
+        if(settingsBtn) settingsBtn.style.display = 'none';
         
-        const c = document.getElementById('app-container');
+        const container = document.getElementById('app-container');
         
-        // Wir brauchen keinen eigenen Back-Button im Container mehr!
+        // WICHTIG: Hier bauen wir den Zurück-Button direkt mit "Inline Styles" ein.
+        // Das garantiert, dass er sichtbar und klickbar ist, egal was die style.css sagt.
+        const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 10000;";
+        const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0;";
+        
         const shell = (title, id) => `
-            <div class="module-container">
-                <h2 style="margin-bottom:15px;">${title}</h2>
+            <div style="${headerStyle}">
+                <button onclick="App.showDashboard()" style="${btnStyle}">
+                    <span style="font-size: 1.4rem; margin-right: 8px;">❮</span> Startseite
+                </button>
+                <span style="margin-left: 15px; color: #888; border-left: 1px solid #555; padding-left: 15px;">${title}</span>
+            </div>
+            <div class="module-container" style="padding-top: 10px;">
                 <div id="${id}">Lade...</div>
             </div>
         `;
 
         if(moduleName === 'todo') { 
-            document.getElementById('app-title').innerText = "Aufgaben";
-            c.innerHTML = shell('Aufgaben', 'task-cont'); TasksModule.init('todo', 'task-cont'); 
+            container.innerHTML = shell('Aufgaben', 'task-cont'); 
+            TasksModule.init('todo', 'task-cont'); 
         } 
         else if (moduleName === 'cleaning') { 
-            document.getElementById('app-title').innerText = "Putzplan";
-            c.innerHTML = shell('Putzplan', 'task-cont'); TasksModule.init('cleaning', 'task-cont'); 
+            container.innerHTML = shell('Putzplan', 'task-cont'); 
+            TasksModule.init('cleaning', 'task-cont'); 
         }
         else if (moduleName === 'shopping') { 
-            document.getElementById('app-title').innerText = "Einkauf";
-            c.innerHTML = shell('Einkauf', 'shop-cont'); ShoppingModule.init('shop-cont'); 
+            container.innerHTML = shell('Einkauf', 'shop-cont'); 
+            ShoppingModule.init('shop-cont'); 
         }
         else if (moduleName === 'voting') { 
-            document.getElementById('app-title').innerText = "Abstimmung";
-            c.innerHTML = shell('Abstimmung', 'vote-cont'); VotingModule.init('vote-cont'); 
+            container.innerHTML = shell('Abstimmung', 'vote-cont'); 
+            VotingModule.init('vote-cont'); 
         }
         else if (moduleName === 'ranking') { 
-            document.getElementById('app-title').innerText = "Ranking";
-            c.innerHTML = shell('Ranking', 'rank-cont'); TasksModule.initRanking('rank-cont'); 
+            container.innerHTML = shell('Ranking', 'rank-cont'); 
+            TasksModule.initRanking('rank-cont'); 
         }
         else if (moduleName === 'soda') { 
-            document.getElementById('app-title').innerText = "SodaStream";
-            c.innerHTML = shell('SodaStream', 'soda-cont'); SodaModule.init('soda-cont'); 
+            container.innerHTML = shell('SodaStream', 'soda-cont'); 
+            SodaModule.init('soda-cont'); 
         }
     },
     
     toggleSettings() {
         const modal = document.getElementById('settings-modal');
-        modal.style.display = 'flex';
-        const cb = document.querySelector('#settings-modal input[type="checkbox"]');
-        if(cb) cb.checked = (localStorage.getItem('wg_notif_enabled') === 'true');
+        if(modal) {
+            modal.style.display = 'flex';
+            const cb = document.querySelector('#settings-modal input[type="checkbox"]');
+            if(cb) cb.checked = (localStorage.getItem('wg_notif_enabled') === 'true');
+        }
     },
 
     toggleNotifications() {
         const cb = document.querySelector('#settings-modal input[type="checkbox"]');
-        localStorage.setItem('wg_notif_enabled', cb.checked);
+        if(cb) localStorage.setItem('wg_notif_enabled', cb.checked);
     }
 };
+
 document.addEventListener('DOMContentLoaded', () => App.init());
