@@ -4,52 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
-    <link rel="stylesheet" href="style.css?v=6">
+    <!-- CACHE BUSTER V9 -->
+    <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
     <header>
         <div style="display:flex; align-items:center; gap:10px;">
-             <!-- Platzhalter für Back Button -->
-             <button id="nav-back-btn" class="icon-btn" style="display:none;">❮</button>
              <h1 id="app-title" style="margin:0; font-size:1.2rem;">WG Hub</h1>
         </div>
         
         <div class="header-actions">
             <div id="user-info"></div>
-            <button class="icon-btn" onclick="App.toggleSettings()" id="settings-btn" style="display:none;">⚙️</button>
+            <button class="icon-btn" onclick="window.App.toggleSettings()" id="settings-btn" style="display:none;">⚙️</button>
         </div>
     </header>
 
     <main id="app-container">
-        <!-- Login Screen -->
-        <div id="login-screen" style="padding: 20px; text-align: center;">
+        <!-- Login Screen mit IDs für die Buttons -->
+        <div id="login-screen">
             <h2>Willkommen</h2>
             <input type="text" id="login-name" placeholder="Name">
             <input type="password" id="login-pin" placeholder="PIN" inputmode="numeric">
-            <button class="primary" onclick="App.login()">Starten</button>
+            
+            <!-- Button mit ID login-btn -->
+            <button id="login-btn" class="primary">Starten</button>
             <p id="login-msg" style="color: var(--danger);"></p>
             
-            <!-- GÄSTE BUTTON -->
             <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 20px;">
                 <p style="color:#666; font-size:0.8rem; margin-bottom:10px;">Nur zu Besuch?</p>
-                <button onclick="App.enterGuestMode()" style="background:transparent; border:1px solid #555; color:#aaa; padding:8px 15px; border-radius:20px; cursor:pointer;">
+                <!-- Button mit ID guest-btn -->
+                <button id="guest-btn" style="background:transparent; border:1px solid #555; color:#aaa; padding:8px 15px; border-radius:20px; cursor:pointer;">
                     📖 Zum Gästebuch
                 </button>
             </div>
         </div>
     </main>
 
-    <!-- Modals (bleiben wie sie sind) -->
+    <!-- Modals -->
     <div id="settings-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('settings-modal').style.display='none'">&times;</button>
             <h3>Einstellungen</h3>
             <label style="display:flex; justify-content:space-between; align-items:center;">
                 <span>Benachrichtigungen</span>
-                <input type="checkbox" onchange="App.toggleNotifications()" style="width:auto;">
+                <input type="checkbox" style="width:auto;">
             </label>
-            <button onclick="App.logout()" style="background:#333; color:white; padding:10px; border:none; width:100%; margin-top:20px;">Abmelden</button>
+            <button onclick="window.App.logout()" style="background:#333; color:white; padding:10px; border:none; width:100%; margin-top:20px;">Abmelden</button>
         </div>
     </div>
 
@@ -89,14 +90,13 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="js/api.js"></script>
     <script src="js/modules/calendar.js"></script>
     <script src="js/modules/shopping.js"></script>
     <script src="js/modules/tasks.js"></script>
     <script src="js/modules/voting.js"></script>
     <script src="js/modules/sodastream.js"></script>
-    <script src="js/modules/guestbook.js"></script> <!-- NEU -->
+    <script src="js/modules/guestbook.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
