@@ -37,7 +37,7 @@ const TasksModule = {
     async loadTasks(filterType) {
         const listDiv = document.getElementById('actual-list');
         if(!listDiv) return;
-        const result = await API.post('read', { sheet: 'Tasks', _t: new Date().getTime() });
+        const result = await API.post('read', { sheet: 'Tasks', _t: Date.now() });
         if (result.status === 'success') {
             this.tasks = result.data.filter(t => t.status === 'open');
             this.render(filterType);
@@ -50,11 +50,12 @@ const TasksModule = {
         
         const filtered = this.tasks.filter(t => {
             if(filterType === 'cleaning') return t.type === 'cleaning';
-            if(filterType === 'todo') return t.type !== 'cleaning' && t.type !== 'shopping';
+            // ToDo zeigt alles außer Putzen (also auch Einkaufen und General)
+            if(filterType === 'todo') return t.type !== 'cleaning'; 
             return true;
         });
 
-        if(filtered.length === 0) { listDiv.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>Nichts offen.</p>"; return; }
+        if(filtered.length === 0) { listDiv.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>Alles erledigt! 🎉</p>"; return; }
 
         filtered.forEach(task => {
             listDiv.innerHTML += `
@@ -63,6 +64,7 @@ const TasksModule = {
                         <strong>${task.title}</strong>
                         <small style="color:var(--text-muted)">${task.date} • ${task.points} Pkt</small>
                     </div>
+                    <!-- BUTTON LOGIK -->
                     <button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>
                 </div>`;
         });
@@ -70,38 +72,48 @@ const TasksModule = {
 
     handleCheck(id) {
         const btn = document.getElementById(`btn-${id}`);
-        // Doppelklick Logik
-        if (this.clickTimer[id]) {
-            clearTimeout(this.clickTimer[id]);
-            delete this.clickTimer[id];
-            this.completeTask(id); // Ausführen
+        if(!btn) return;
+
+        // Status prüfen
+        if (btn.classList.contains('confirm-wait')) {
+            // ZWEITER KLICK -> WEG DAMIT (Sofort!)
+            this.completeTaskOptimistic(id);
         } else {
-            // Erster Klick
-            btn.classList.add('confirm-mode');
-            btn.innerHTML = "❓"; // Visuelles Feedback
+            // ERSTER KLICK -> WARNUNG (Gelb)
+            btn.classList.add('confirm-wait');
+            btn.innerHTML = "✖"; // Kreuz zum Abbrechen/Bestätigen
+            
+            // Timer um Reset
             this.clickTimer[id] = setTimeout(() => {
-                // Reset
-                btn.classList.remove('confirm-mode');
+                btn.classList.remove('confirm-wait');
                 btn.innerHTML = "✔";
-                delete TasksModule.clickTimer[id];
-            }, 2000);
+            }, 3000); // 3 Sekunden Zeit
         }
     },
 
-    async completeTask(id) {
-        // Optimistic UI: Sofort ausblenden
+    async completeTaskOptimistic(id) {
+        // UI SOFORT aktualisieren (nicht warten)
         const row = document.getElementById(`row-${id}`);
         if(row) {
-            row.style.opacity = '0.3';
-            row.style.pointerEvents = 'none';
+            row.style.transition = "all 0.5s";
+            row.style.opacity = "0";
+            row.style.transform = "translateX(50px)";
+            setTimeout(() => row.remove(), 500); // Ganz entfernen nach Animation
         }
 
-        // Im Hintergrund senden
-        await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
+        // Timer löschen falls vorhanden
+        if(this.clickTimer[id]) clearTimeout(this.clickTimer[id]);
+
+        // API Call im Hintergrund
+        await API.post('update', { 
+            sheet: 'Tasks', 
+            id: id, 
+            updates: JSON.stringify({ status: 'done' }), 
+            user: App.user.name 
+        });
         
-        // Neu laden (wenn es schnell gehen soll, könnte man das auch weglassen und nur Row entfernen)
-        const isCleaning = document.querySelector('h2') && document.querySelector('h2').innerText.includes('Putzplan');
-        await this.loadTasks(isCleaning ? 'cleaning' : 'todo');
+        // Kein Reload nötig, User sieht es ist weg.
+        // Reload würde nur stören.
     },
 
     async addTask(type) {
@@ -113,7 +125,6 @@ const TasksModule = {
 
         if(!title) return;
         
-        // Optimistic UI für Add ist schwerer, wir zeigen Spinner
         const btn = document.querySelector('.add-box button');
         btn.innerText = "⏳";
 
@@ -127,20 +138,17 @@ const TasksModule = {
         await this.loadTasks(type);
     },
     
-    // Ranking Logik hier integriert
     async loadRanking() {
         const listDiv = document.getElementById('actual-list');
         listDiv.innerHTML = "Lade Ranking...";
-        const result = await API.post('get_ranking', { _t: new Date().getTime() });
+        const result = await API.post('get_ranking', { _t: Date.now() });
         
         if (result.status === 'success') {
             listDiv.innerHTML = "";
+            window._rankingLogs = result.log; // Logs speichern
+            
             result.data.forEach((entry, idx) => {
                 let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : ''));
-                // WICHTIG: Wir speichern die Logs global oder übergeben sie sicher
-                // Da onclick mit Objekten messy ist, nutzen wir eine Hilfsmethode
-                window._rankingLogs = result.log; // Globaler Store temporär
-                
                 listDiv.innerHTML += `
                     <div class="list-item" onclick="TasksModule.showDetails('${entry.name}')" style="cursor:pointer;">
                         <div style="display:flex; align-items:center; gap:10px;">
@@ -150,7 +158,6 @@ const TasksModule = {
                         <span class="points-badge">${entry.points} Pkt</span>
                     </div>`;
             });
-            listDiv.innerHTML += `<p style="text-align:center; font-size:0.8rem; color:var(--text-muted); margin-top:20px;">Tippe auf Namen für Details.</p>`;
         }
     },
     
@@ -166,7 +173,8 @@ const TasksModule = {
         else {
             userLogs.reverse().forEach(log => {
                 const d = new Date(log.date);
-                const dateStr = `${d.getDate()}.${d.getMonth()+1}.`;
+                const dateStr = !isNaN(d) ? `${d.getDate()}.${d.getMonth()+1}.` : '';
+                // HIER: Sicherstellen dass wir Titel anzeigen
                 list.innerHTML += `
                     <div style="padding:10px 0; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
                         <span><small style="color:var(--text-muted)">${dateStr}</small> ${log.reason}</span>
