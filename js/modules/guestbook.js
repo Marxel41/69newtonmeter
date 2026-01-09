@@ -1,104 +1,229 @@
 const GuestbookModule = {
-    async init(containerId, isPublic = false) {
+    async init(containerId) {
         const container = document.getElementById(containerId);
-        if(!container) return;
-
-        const backFunc = isPublic ? "window.location.reload()" : "App.showDashboard()";
-        const backText = isPublic ? "Zum Login" : "Startseite";
-
-        // Header nur anzeigen, wenn nicht public (im Public Mode hat man evtl. kein Menü)
-        // Oder wir nutzen konsistentes Design:
-        const headerHtml = `
-            <div style="display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 100;">
-                <button onclick="${backFunc}" style="background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0;">
-                    <span style="font-size: 1.4rem; margin-right: 8px;">❮</span> ${backText}
-                </button>
-                <span style="margin-left: 15px; color: #888; border-left: 1px solid #555; padding-left: 15px;">Gästebuch</span>
-            </div>`;
-
+        
+        // Dein HTML Code (eingebettet in den Wrapper)
         container.innerHTML = `
-            ${headerHtml}
-            <div class="module-container" style="padding-top: 20px;">
-                <!-- EINGABE FORMULAR -->
-                <div class="add-box" style="background:var(--card-bg); padding:20px; border-radius:12px; margin-bottom:30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                    <h3 style="margin-top:0; color:var(--secondary);">Hinterlasse eine Nachricht! 👋</h3>
-                    <input type="text" id="gb-name" placeholder="Dein Name" style="margin-bottom:10px;">
-                    <textarea id="gb-msg" placeholder="Was möchtest du sagen?" style="width:100%; background:#2c2c2c; border:1px solid #444; color:white; border-radius:8px; padding:10px; min-height:80px; box-sizing:border-box; margin-bottom:10px; font-family:inherit;"></textarea>
-                    <button class="primary" onclick="GuestbookModule.submitEntry()">Absenden</button>
+        <div class="gb-wrapper">
+            <div class="gb-form-container">
+                
+                <!-- Formular Ansicht -->
+                <div id="form-view">
+                    <h1>📝 Aufenthaltsfeedback</h1>
+                    <p class="subtitle">Dein Feedback ist uns mega wichtig</p>
+
+                    <!-- ID für JS Zugriff -->
+                    <div id="gb-form-inputs">
+                        
+                        <div class="form-row">
+                            <label>Dein Name (oder Alias)</label>
+                            <input type="text" id="gb-name" placeholder="z.B. Sherlock Holmes">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Grund des Besuchs</label>
+                            <input type="text" id="gb-grund" placeholder="z.B. Wollte nur kurz Hallo sagen...">
+                        </div>
+
+                        <div class="form-row">
+                            <label style="display:flex; justify-content:space-between; align-items:center;">
+                                Ordnungs-Skala (1-10)
+                                <div>
+                                    <span id="rangeVal" style="color:#667eea; font-weight:bold; font-size:1.2rem;">5</span>
+                                    <span id="emojiDisplay" class="emoji-feedback">😐</span>
+                                </div>
+                            </label>
+                            <input type="range" id="gb-ordnung" min="1" max="10" value="5">
+                            <div class="range-labels">
+                                <span>💣 Chaos</span>
+                                <span>✨ Blitzblank</span>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <label>Kulinarik: Was wurde dir angeboten?</label>
+                            <select id="gb-kulinarik">
+                                <option value="Nichts">Nichts (Frechheit!)</option>
+                                <option value="Leitungswasser">Lauwarmes Leitungswasser</option>
+                                <option value="Kaffee/Tee">Kaffee / Tee</option>
+                                <option value="Alkohol">Alkohol (Notwendig)</option>
+                                <option value="Gourmet">Gourmet 3-Gänge Menü</option>
+                                <option value="Abgelaufen">Abgelaufene Kekse</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <label>Welches seltsame Objekt lag offen herum?</label>
+                            <input type="text" id="gb-objekt" placeholder="z.B. Willys Dildos">
+                        </div>
+
+                        <div class="form-row">
+                            <label>Wonach roch es beim Reinkommen?</label>
+                            <select id="gb-geruch">
+                                <option value="Neutral">Frische Luft</option>
+                                <option value="Kaffee">Frischer Kaffee</option>
+                                <option value="Essen">Leckerem Essen</option>
+                                <option value="Angstschweiß">Angstschweiß</option>
+                                <option value="Raumspray">Billiges Raumspray</option>
+                                <option value="Nasser Hund">Nasser Hund</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <label>Hat der/die Gastgeber/in eine Hose getragen?</label>
+                            <select id="gb-hose">
+                                <option value="Ja">Ja, vorbildlich</option>
+                                <option value="Nein">Nein, leider nicht</option>
+                                <option value="Unsicher">Bin mir unsicher / Will es nicht wissen</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <label>Würdest du hier notfalls übernachten?</label>
+                            <select id="gb-wohlfuehl">
+                                <option value="Sofort">Ja, sofort!</option>
+                                <option value="Wenn es brennt">Nur wenn ich die letze Bahn verpasst habe</option>
+                                <option value="Niemals">Lieber unter der Brücke</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-row">
+                            <label>Sonstige Anmerkungen</label>
+                            <textarea id="gb-nachricht" rows="4" placeholder="Was du noch loswerden wolltest..."></textarea>
+                        </div>
+
+                        <button id="gb-submit-btn" class="gb-btn" onclick="GuestbookModule.submit()">Absenden 🚀</button>
+                    </div>
                 </div>
 
-                <!-- LISTE -->
-                <h4 style="color:var(--text-muted); margin-bottom:15px;">Bisherige Einträge</h4>
-                <div id="gb-list">Lade Einträge...</div>
+                <!-- Success Ansicht -->
+                <div id="success-view" style="display:none; text-align: center;">
+                    <div style="font-size: 5rem; margin-bottom: 20px;">🎉</div>
+                    <h2 style="color:#2d3748; margin-bottom: 10px;">Erfolgreich übermittelt!</h2>
+                    <p style="color:#718096; margin-bottom: 30px;">
+                        Vielen Dank für deine brutale Ehrlichkeit.<br>
+                    </p>
+                    <button class="gb-btn" onclick="GuestbookModule.reset()">Noch einen Eintrag</button>
+                </div>
+
             </div>
+
+            <!-- TABELLE DER ERGEBNISSE -->
+            <div style="margin-top: 40px;">
+                <h2 style="color: white; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Das sagen andere</h2>
+                <div id="gb-entries-list">Lade Einträge...</div>
+            </div>
+        </div>
         `;
 
+        this.attachSliderLogic();
         await this.loadEntries();
     },
 
-    async loadEntries() {
-        const list = document.getElementById('gb-list');
-        // _t gegen Caching
-        const result = await API.post('read', { sheet: 'Guestbook', _t: Date.now() });
+    attachSliderLogic() {
+        const rangeInput = document.getElementById('gb-ordnung');
+        const valDisplay = document.getElementById('rangeVal');
+        const emojiDisplay = document.getElementById('emojiDisplay');
         
-        if (result.status === 'success') {
-            const entries = result.data;
-            list.innerHTML = "";
-            
-            if (entries.length === 0) {
-                list.innerHTML = "<p style='text-align:center; color:#666;'>Noch keine Einträge. Sei der Erste!</p>";
-                return;
+        const emojis = {
+            1: "☢️", 2: "🗑️", 3: "🕸️", 4: "🤧", 5: "🤨", 
+            6: "😐", 7: "👌", 8: "🧹", 9: "🧼", 10: "✨"
+        };
+
+        rangeInput.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            valDisplay.innerText = val;
+            const newEmoji = emojis[val] || "😐";
+            if (emojiDisplay.innerText !== newEmoji) {
+                emojiDisplay.innerText = newEmoji;
+                // Simple animation reset
+                emojiDisplay.style.opacity = 0;
+                setTimeout(() => emojiDisplay.style.opacity = 1, 50);
             }
-
-            // Neueste zuerst
-            entries.reverse().forEach(entry => {
-                let dateStr = "";
-                try {
-                    const d = new Date(entry.date);
-                    if(!isNaN(d.getTime())) dateStr = d.toLocaleDateString() + " " + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                } catch(e) {}
-
-                list.innerHTML += `
-                    <div style="background:var(--card-bg); padding:15px; border-radius:12px; margin-bottom:15px; position:relative;">
-                        <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">${entry.name}</div>
-                        <div style="color:var(--text-main); line-height:1.4; white-space: pre-wrap;">${entry.message}</div>
-                        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:10px; text-align:right;">${dateStr}</div>
-                    </div>
-                `;
-            });
-        } else {
-            list.innerHTML = "<p style='color:var(--danger);'>Fehler beim Laden.</p>";
-        }
+        });
     },
 
-    async submitEntry() {
-        const name = document.getElementById('gb-name').value;
-        const msg = document.getElementById('gb-msg').value;
+    async submit() {
+        // Daten sammeln
+        const payload = {
+            date: new Date().toISOString(),
+            name: document.getElementById('gb-name').value,
+            grund: document.getElementById('gb-grund').value,
+            ordnung: document.getElementById('gb-ordnung').value,
+            kulinarik: document.getElementById('gb-kulinarik').value,
+            objekt: document.getElementById('gb-objekt').value,
+            geruch: document.getElementById('gb-geruch').value,
+            hose: document.getElementById('gb-hose').value,
+            wohlfuehl: document.getElementById('gb-wohlfuehl').value,
+            nachricht: document.getElementById('gb-nachricht').value
+        };
 
-        if(!name || !msg) { alert("Bitte Name und Nachricht eingeben."); return; }
+        if(!payload.name) { alert("Name fehlt!"); return; }
 
-        const btn = document.querySelector('.add-box button');
+        const btn = document.getElementById('gb-submit-btn');
         const oldText = btn.innerText;
         btn.innerText = "Sende...";
         btn.disabled = true;
 
-        const payload = {
-            date: new Date().toISOString(),
-            name: name,
-            message: msg
-        };
-
+        // An Google Sheet senden
         const result = await API.post('create', { sheet: 'Guestbook', payload: JSON.stringify(payload) });
 
         btn.innerText = oldText;
         btn.disabled = false;
 
         if (result.status === 'success') {
-            document.getElementById('gb-msg').value = ""; // Textfeld leeren
-            // Name lassen wir stehen, falls man noch was schreiben will
+            document.getElementById('form-view').style.display = 'none';
+            document.getElementById('success-view').style.display = 'block';
             await this.loadEntries();
         } else {
             alert("Fehler: " + result.message);
+        }
+    },
+
+    reset() {
+        // Felder leeren (rudimentär)
+        document.getElementById('gb-name').value = "";
+        document.getElementById('gb-grund').value = "";
+        document.getElementById('gb-objekt').value = "";
+        document.getElementById('gb-nachricht').value = "";
+        
+        document.getElementById('form-view').style.display = 'block';
+        document.getElementById('success-view').style.display = 'none';
+    },
+
+    async loadEntries() {
+        const list = document.getElementById('gb-entries-list');
+        const result = await API.post('read', { sheet: 'Guestbook', _t: Date.now() });
+
+        if (result.status === 'success') {
+            const entries = result.data.reverse(); // Neueste oben
+            list.innerHTML = "";
+            if (entries.length === 0) list.innerHTML = "<p style='text-align:center; color:white;'>Noch keine Einträge.</p>";
+            
+            entries.forEach(entry => {
+                let dStr = "-";
+                try { dStr = new Date(entry.date).toLocaleDateString(); } catch(e){}
+
+                list.innerHTML += `
+                    <div class="gb-entry-card">
+                        <div class="gb-entry-header">
+                            <span>${entry.name}</span>
+                            <span>Ordnung: ${entry.ordnung}/10</span>
+                        </div>
+                        <div style="font-style:italic; margin-bottom:5px;">"${entry.grund}"</div>
+                        
+                        <div style="background:#f7fafc; padding:8px; border-radius:8px; font-size:0.9rem; margin:10px 0;">
+                            <div>🥘 ${entry.kulinarik}</div>
+                            <div>👃 ${entry.geruch}</div>
+                            <div>👖 Hose? ${entry.hose}</div>
+                            ${entry.objekt ? `<div>👀 Objekt: ${entry.objekt}</div>` : ''}
+                        </div>
+
+                        ${entry.nachricht ? `<div style="margin-top:5px;">"${entry.nachricht}"</div>` : ''}
+                        <div class="gb-entry-meta">${dStr}</div>
+                    </div>
+                `;
+            });
         }
     }
 };
