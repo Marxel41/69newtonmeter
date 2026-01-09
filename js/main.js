@@ -2,9 +2,10 @@ const App = {
     user: null,
 
     init() {
+        // App global verfügbar machen
         window.App = this; 
         
-        // 1. Event Listener für Login-Buttons hinzufügen (Sicherer als onclick im HTML)
+        // 1. Event Listener für Login-Buttons hinzufügen
         const loginBtn = document.getElementById('login-btn');
         if(loginBtn) loginBtn.addEventListener('click', () => this.login());
         
@@ -54,9 +55,9 @@ const App = {
         document.getElementById('login-screen').style.display = 'none';
         const container = document.getElementById('app-container');
         
-        // Header anpassen für Gäste
-        const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 10000;";
-        const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0;";
+        // Header anpassen für Gäste (Hier brauchen wir einen speziellen Zurück-Button zum Login)
+        const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
+        const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
 
         container.innerHTML = `
             <div style="${headerStyle}">
@@ -69,7 +70,8 @@ const App = {
         `;
         
         if(typeof GuestbookModule !== 'undefined') {
-            GuestbookModule.init('guest-view');
+            // true = Öffentlicher Modus (Formular + Liste)
+            GuestbookModule.init('guest-view', true);
         }
     },
 
@@ -82,7 +84,8 @@ const App = {
         const sBtn = document.getElementById('settings-btn');
         if(sBtn) sBtn.style.display = 'block';
         
-        document.getElementById('user-info').innerHTML = `Hi, <strong>${this.user.name}</strong>`;
+        const userInfo = document.getElementById('user-info');
+        if (userInfo) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
         
         const c = document.getElementById('app-container');
         c.innerHTML = `
@@ -113,8 +116,10 @@ const App = {
         
         const container = document.getElementById('app-container');
         
-        const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 10000;";
-        const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0;";
+        // STANDARD Header für ALLE Module (auch Gästebuch)
+        // Inline Styles mit hohem z-index und pointer-events
+        const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
+        const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
         
         const shell = (title, id) => `
             <div style="${headerStyle}">
@@ -128,26 +133,17 @@ const App = {
             </div>
         `;
 
-        if(moduleName === 'guestbook') {
-            // Spezielle Shell für Gästebuch (ohne schwarzen Hintergrund im Header, um Gradient zu wirken lassen)
-            container.innerHTML = `
-                <div style="position: absolute; top: 15px; left: 15px; z-index: 10001;">
-                    <button onclick="window.App.showDashboard()" style="background: rgba(0,0,0,0.3); border: 1px solid white; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(5px);">
-                        ❮ Zurück
-                    </button>
-                </div>
-                <div id="gb-cont"></div>
-            `;
-            GuestbookModule.init('gb-cont');
-            return;
-        }
-
         if(moduleName === 'todo') { container.innerHTML = shell('Aufgaben', 'task-cont'); TasksModule.init('todo', 'task-cont'); } 
         else if (moduleName === 'cleaning') { container.innerHTML = shell('Putzplan', 'task-cont'); TasksModule.init('cleaning', 'task-cont'); }
         else if (moduleName === 'shopping') { container.innerHTML = shell('Einkauf', 'shop-cont'); ShoppingModule.init('shop-cont'); }
         else if (moduleName === 'voting') { container.innerHTML = shell('Abstimmung', 'vote-cont'); VotingModule.init('vote-cont'); }
         else if (moduleName === 'ranking') { container.innerHTML = shell('Ranking', 'rank-cont'); TasksModule.initRanking('rank-cont'); }
         else if (moduleName === 'soda') { container.innerHTML = shell('SodaStream', 'soda-cont'); SodaModule.init('soda-cont'); }
+        else if (moduleName === 'guestbook') { 
+            // Hier rufen wir es jetzt mit false auf (nicht öffentlich/nicht gast), d.h. Formular ausblenden
+            container.innerHTML = shell('Gästebuch', 'gb-cont'); 
+            GuestbookModule.init('gb-cont', false); 
+        }
     },
     
     toggleSettings() {
