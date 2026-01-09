@@ -1,20 +1,18 @@
 const GuestbookModule = {
-    async init(containerId) {
+    async init(containerId, isPublic = true) {
         const container = document.getElementById(containerId);
         
-        // Dein HTML Code (eingebettet in den Wrapper)
-        container.innerHTML = `
-        <div class="gb-wrapper">
+        let htmlContent = '<div class="gb-wrapper" style="min-height: auto;">';
+        
+        // Formular nur anzeigen, wenn öffentlicher Modus (Gast)
+        if (isPublic) {
+            htmlContent += `
             <div class="gb-form-container">
-                
-                <!-- Formular Ansicht -->
                 <div id="form-view">
                     <h1>📝 Aufenthaltsfeedback</h1>
                     <p class="subtitle">Dein Feedback ist uns mega wichtig</p>
 
-                    <!-- ID für JS Zugriff -->
                     <div id="gb-form-inputs">
-                        
                         <div class="form-row">
                             <label>Dein Name (oder Alias)</label>
                             <input type="text" id="gb-name" placeholder="z.B. Sherlock Holmes">
@@ -96,7 +94,6 @@ const GuestbookModule = {
                     </div>
                 </div>
 
-                <!-- Success Ansicht -->
                 <div id="success-view" style="display:none; text-align: center;">
                     <div style="font-size: 5rem; margin-bottom: 20px;">🎉</div>
                     <h2 style="color:#2d3748; margin-bottom: 10px;">Erfolgreich übermittelt!</h2>
@@ -105,18 +102,26 @@ const GuestbookModule = {
                     </p>
                     <button class="gb-btn" onclick="GuestbookModule.reset()">Noch einen Eintrag</button>
                 </div>
+            </div>`;
+        }
 
-            </div>
-
-            <!-- TABELLE DER ERGEBNISSE -->
-            <div style="margin-top: 40px;">
-                <h2 style="color: white; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Das sagen andere</h2>
+        // Liste der Ergebnisse (wird immer angezeigt, sieht aber im internen Modus etwas anders aus)
+        const headerText = isPublic ? "Das sagen andere" : "Einträge";
+        const containerStyle = isPublic ? "margin-top: 40px;" : "width: 100%; max-width: 600px;";
+        
+        htmlContent += `
+            <div style="${containerStyle}">
+                <h2 style="color: white; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-bottom: 20px;">${headerText}</h2>
                 <div id="gb-entries-list">Lade Einträge...</div>
             </div>
-        </div>
-        `;
+        </div>`; // Ende .gb-wrapper
 
-        this.attachSliderLogic();
+        container.innerHTML = htmlContent;
+
+        if (isPublic) {
+            this.attachSliderLogic();
+        }
+        
         await this.loadEntries();
     },
 
@@ -130,21 +135,21 @@ const GuestbookModule = {
             6: "😐", 7: "👌", 8: "🧹", 9: "🧼", 10: "✨"
         };
 
-        rangeInput.addEventListener('input', function() {
-            const val = parseInt(this.value);
-            valDisplay.innerText = val;
-            const newEmoji = emojis[val] || "😐";
-            if (emojiDisplay.innerText !== newEmoji) {
-                emojiDisplay.innerText = newEmoji;
-                // Simple animation reset
-                emojiDisplay.style.opacity = 0;
-                setTimeout(() => emojiDisplay.style.opacity = 1, 50);
-            }
-        });
+        if(rangeInput) {
+            rangeInput.addEventListener('input', function() {
+                const val = parseInt(this.value);
+                valDisplay.innerText = val;
+                const newEmoji = emojis[val] || "😐";
+                if (emojiDisplay.innerText !== newEmoji) {
+                    emojiDisplay.innerText = newEmoji;
+                    emojiDisplay.style.opacity = 0;
+                    setTimeout(() => emojiDisplay.style.opacity = 1, 50);
+                }
+            });
+        }
     },
 
     async submit() {
-        // Daten sammeln
         const payload = {
             date: new Date().toISOString(),
             name: document.getElementById('gb-name').value,
@@ -165,7 +170,6 @@ const GuestbookModule = {
         btn.innerText = "Sende...";
         btn.disabled = true;
 
-        // An Google Sheet senden
         const result = await API.post('create', { sheet: 'Guestbook', payload: JSON.stringify(payload) });
 
         btn.innerText = oldText;
@@ -181,7 +185,6 @@ const GuestbookModule = {
     },
 
     reset() {
-        // Felder leeren (rudimentär)
         document.getElementById('gb-name').value = "";
         document.getElementById('gb-grund').value = "";
         document.getElementById('gb-objekt').value = "";
@@ -196,7 +199,7 @@ const GuestbookModule = {
         const result = await API.post('read', { sheet: 'Guestbook', _t: Date.now() });
 
         if (result.status === 'success') {
-            const entries = result.data.reverse(); // Neueste oben
+            const entries = result.data.reverse();
             list.innerHTML = "";
             if (entries.length === 0) list.innerHTML = "<p style='text-align:center; color:white;'>Noch keine Einträge.</p>";
             
