@@ -51,7 +51,10 @@ const App = {
     },
 
     enterGuestMode() {
-        document.getElementById('login-screen').style.display = 'none';
+        // Sicherer Check für Login Screen
+        const loginScreen = document.getElementById('login-screen');
+        if(loginScreen) loginScreen.style.display = 'none';
+        
         const container = document.getElementById('app-container');
         
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
@@ -77,8 +80,12 @@ const App = {
     logout() { localStorage.removeItem('wg_user'); location.reload(); },
 
     showDashboard() {
+        // Modal-Fenster schließen
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        document.getElementById('login-screen').style.display = 'none';
+        
+        // BUG FIX: Prüfen ob Login-Screen existiert, bevor wir darauf zugreifen
+        const loginScreen = document.getElementById('login-screen');
+        if(loginScreen) loginScreen.style.display = 'none';
         
         const sBtn = document.getElementById('settings-btn');
         if(sBtn) sBtn.style.display = 'block';
