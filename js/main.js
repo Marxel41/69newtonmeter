@@ -22,8 +22,7 @@ const App = {
             catch (e) { localStorage.removeItem('wg_user'); }
         }
 
-        // Start Notification Loop (läuft im Hintergrund)
-        this.startNotificationService();
+        // Benachrichtigungs-Service deaktiviert
     },
 
     async login() {
@@ -152,103 +151,15 @@ const App = {
     toggleSettings() {
         const modal = document.getElementById('settings-modal');
         if(modal) modal.style.display = 'flex';
+        // Wir setzen nur den Status visual, keine Funktion dahinter
+        const cb = document.querySelector('#settings-modal input[type="checkbox"]');
+        if(cb) cb.checked = (localStorage.getItem('wg_notif_enabled') === 'true');
     },
 
     toggleNotifications() {
+        // Speichert nur die Präferenz, aber startet keinen Service mehr
         const cb = document.querySelector('#settings-modal input[type="checkbox"]');
-        if(cb) {
-            localStorage.setItem('wg_notif_enabled', cb.checked);
-            if (cb.checked && "Notification" in window) Notification.requestPermission();
-        }
-    },
-
-    // --- NOTIFICATION SERVICE ---
-    startNotificationService() {
-        // Erster Check nach 5 Sekunden, dann alle 60 Sek
-        setTimeout(() => this.checkNotifications(), 5000);
-        setInterval(() => this.checkNotifications(), 60000);
-    },
-
-    async checkNotifications() {
-        if (localStorage.getItem('wg_notif_enabled') !== 'true') return;
-        if (Notification.permission !== "granted") return;
-
-        const now = new Date();
-        const currentHour = now.getHours();
-        const todayStr = now.toISOString().split('T')[0];
-
-        try {
-            // Wir machen einen minimalen Abruf aller wichtigen Daten
-            const [rTasks, rEvents, rVotes, rGuest] = await Promise.all([
-                API.post('read', { sheet: 'Tasks', _t: Date.now() }),
-                API.post('read', { sheet: 'Events', _t: Date.now() }),
-                API.post('read', { sheet: 'Votes', _t: Date.now() }),
-                API.post('read', { sheet: 'Guestbook', _t: Date.now() })
-            ]);
-
-            // 1. TASKS (Putz/ToDo) -> Alarm um 10 Uhr
-            if (currentHour >= 10 && rTasks.status === 'success') {
-                rTasks.data.forEach(t => {
-                    // Nur offene Tasks von HEUTE
-                    if (t.status === 'open' && t.date === todayStr) {
-                        this.sendNotify(`task_${t.id}`, "Aufgabe fällig!", t.title);
-                    }
-                });
-            }
-
-            // 2. EVENTS (Kalender) -> Alarm um 9 Uhr
-            if (currentHour >= 9 && rEvents.status === 'success') {
-                rEvents.data.forEach(e => {
-                    // Wir müssen das Datum-String Problem beachten (schneiden auf YYYY-MM-DD)
-                    const eDate = e.date.substring(0, 10);
-                    if (eDate === todayStr) {
-                        this.sendNotify(`event_${e.date}_${e.title}`, "Heute im Kalender", e.title);
-                    }
-                });
-            }
-
-            // 3. VOTES (Neu) -> Immer
-            if (rVotes.status === 'success') {
-                // Wir speichern die höchste ID die wir kennen
-                const lastSeenVote = parseInt(localStorage.getItem('wg_last_vote_id') || "0");
-                let maxId = lastSeenVote;
-                
-                rVotes.data.forEach(v => {
-                    const vId = parseInt(v.id);
-                    if (vId > lastSeenVote) {
-                        this.sendNotify(`vote_${v.id}`, "Neue Abstimmung!", v.title);
-                        if (vId > maxId) maxId = vId;
-                    }
-                });
-                localStorage.setItem('wg_last_vote_id', maxId);
-            }
-
-            // 4. GUESTBOOK (Neu) -> Immer
-            if (rGuest.status === 'success') {
-                // Guestbook hat keine ID spalte, wir nutzen Zeitstempel oder Index
-                // Einfachheitshalber nutzen wir die Länge der Liste als Indikator
-                const lastCount = parseInt(localStorage.getItem('wg_gb_count') || "0");
-                const currentCount = rGuest.data.length;
-                
-                if (currentCount > lastCount) {
-                    const newEntry = rGuest.data[currentCount - 1]; // Letzter Eintrag
-                    this.sendNotify(`gb_${currentCount}`, "Neuer Gästebucheintrag", `${newEntry.name} hat geschrieben.`);
-                    localStorage.setItem('wg_gb_count', currentCount);
-                }
-            }
-
-        } catch (e) {
-            console.error("Notif Error", e);
-        }
-    },
-
-    sendNotify(key, title, body) {
-        // Prüfen ob diese spezifische Notification heute schon gesendet wurde
-        const storageKey = `notif_sent_${key}`;
-        if (localStorage.getItem(storageKey)) return;
-
-        new Notification(title, { body: body, icon: 'icon.png' }); // Icon optional
-        localStorage.setItem(storageKey, 'true');
+        if(cb) localStorage.setItem('wg_notif_enabled', cb.checked);
     }
 };
 
