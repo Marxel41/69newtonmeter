@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
-    <!-- CACHE BUSTER V9 -->
-    <link rel="stylesheet" href="style.css?v=9">
+    <!-- CACHE BUSTER V11 -->
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -21,19 +21,17 @@
     </header>
 
     <main id="app-container">
-        <!-- Login Screen mit IDs für die Buttons -->
+        <!-- Login Screen -->
         <div id="login-screen">
             <h2>Willkommen</h2>
             <input type="text" id="login-name" placeholder="Name">
             <input type="password" id="login-pin" placeholder="PIN" inputmode="numeric">
             
-            <!-- Button mit ID login-btn -->
             <button id="login-btn" class="primary">Starten</button>
             <p id="login-msg" style="color: var(--danger);"></p>
             
             <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 20px;">
                 <p style="color:#666; font-size:0.8rem; margin-bottom:10px;">Nur zu Besuch?</p>
-                <!-- Button mit ID guest-btn -->
                 <button id="guest-btn" style="background:transparent; border:1px solid #555; color:#aaa; padding:8px 15px; border-radius:20px; cursor:pointer;">
                     📖 Zum Gästebuch
                 </button>
@@ -97,6 +95,7 @@
     <script src="js/modules/voting.js"></script>
     <script src="js/modules/sodastream.js"></script>
     <script src="js/modules/guestbook.js"></script>
+    <script src="js/modules/train.js"></script> <!-- NEU -->
     <script src="js/main.js"></script>
 </body>
 </html>
