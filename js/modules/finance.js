@@ -26,14 +26,12 @@ const FinanceModule = {
     },
 
     async load() {
-        // Wir brauchen auch die Userliste, um durch 3 (oder X) zu teilen
         const result = await API.post('read', { sheet: 'Finance', _t: Date.now() });
         
         if (result.status === 'success') {
             this.transactions = result.data;
-            this.users = result.users || []; // Kommt vom Backend Update
+            this.users = result.users || []; 
             
-            // Fallback falls Users leer (z.B. Backend noch alt)
             if(this.users.length === 0) this.users = [App.user.name]; 
 
             this.calculateDebts();
@@ -44,19 +42,14 @@ const FinanceModule = {
     },
 
     calculateDebts() {
-        // 1. Balance für jeden auf 0 setzen
         let bal = {};
         this.users.forEach(u => bal[u] = 0);
 
-        // 2. Durch alle Transaktionen loopen
         this.transactions.forEach(t => {
             const amount = parseFloat(t.amount);
             const payer = t.payer;
 
             if (t.type === 'expense') {
-                // Einer zahlt, alle teilen
-                // Payer bekommt +Amount
-                // Jeder (inkl Payer) bekommt -Amount/Anzahl
                 const splitAmount = amount / this.users.length;
                 
                 if (!bal[payer]) bal[payer] = 0;
@@ -68,12 +61,6 @@ const FinanceModule = {
                 });
             } 
             else if (t.type === 'payment') {
-                // Direkte Zahlung von A an B
-                // Payer (Schuldner) zahlt -> Balance + (Schuld wird weniger)
-                // Recipient (Gläubiger) bekommt -> Balance - (Forderung wird weniger)
-                // HÄ? Splitwise Logik:
-                // Balance = "Was ich zurückbekomme".
-                // Wenn ich 10€ zahle (an Kreditor), erhöht sich mein "Guthaben" im System.
                 const recipient = t.recipient;
                 
                 if (!bal[payer]) bal[payer] = 0;
@@ -94,26 +81,20 @@ const FinanceModule = {
         const displayEl = document.getElementById('my-balance-display');
         const summaryEl = document.getElementById('debt-summary');
 
-        // Anzeige Hauptzahl
         const color = myBal >= 0 ? 'var(--secondary)' : 'var(--danger)';
         const prefix = myBal >= 0 ? '+' : '';
         displayEl.style.color = color;
         displayEl.innerText = `${prefix}${myBal.toFixed(2)} €`;
 
-        // Anzeige Details (Wer schuldet wem?)
-        // Simplifizierter Algorithmus: Wir zeigen einfach nur die Netto-Werte aller an
         let summaryHtml = "";
-        
-        // Sortieren: Wer kriegt am meisten?
         const sortedUsers = Object.keys(this.balances).sort((a,b) => this.balances[b] - this.balances[a]);
 
         sortedUsers.forEach(u => {
-            if (u === myName) return; // Mich selbst nicht anzeigen
+            if (u === myName) return; 
             const val = this.balances[u];
-            if (Math.abs(val) < 0.01) return; // 0 ignorieren
+            if (Math.abs(val) < 0.01) return; 
 
             const uColor = val >= 0 ? 'var(--secondary)' : 'var(--danger)';
-            const text = val >= 0 ? 'bekommt noch' : 'schuldet der WG';
             summaryHtml += `<div style="display:flex; justify-content:space-between; margin-top:5px;">
                 <span>${u}</span>
                 <span style="color:${uColor}">${val.toFixed(2)} €</span>
@@ -127,7 +108,6 @@ const FinanceModule = {
         const list = document.getElementById('finance-list');
         list.innerHTML = "";
         
-        // Neueste zuerst
         const history = [...this.transactions].reverse();
 
         history.forEach(t => {
@@ -135,7 +115,6 @@ const FinanceModule = {
             const icon = isExpense ? '💸' : '🤝';
             const amountClass = isExpense ? 'color:var(--text-main)' : 'color:var(--secondary)';
             
-            // Datum formatieren
             let dateStr = "";
             try { dateStr = new Date(t.date).toLocaleDateString(); } catch(e){}
 
@@ -163,7 +142,6 @@ const FinanceModule = {
         });
     },
 
-    // --- MODALS ---
     showAddExpense() {
         const modal = document.getElementById('finance-modal');
         modal.innerHTML = `
@@ -179,8 +157,6 @@ const FinanceModule = {
 
     showSettleUp() {
         const modal = document.getElementById('finance-modal');
-        
-        // Wen kann ich bezahlen? (Alle außer mir)
         const others = this.users.filter(u => u !== App.user.name);
         let options = others.map(u => `<option value="${u}">${u}</option>`).join('');
 
@@ -204,7 +180,6 @@ const FinanceModule = {
 
         if (!amount || !desc) { alert("Bitte Betrag eingeben"); return; }
 
-        // Modal zu & Feedback
         document.getElementById('finance-modal').style.display = 'none';
         
         const payload = {
@@ -216,14 +191,11 @@ const FinanceModule = {
             recipient: recipient
         };
 
-        // Optimistic UI Update (Fake Eintrag für sofortiges Feedback)
         this.transactions.push(payload);
         this.calculateDebts();
         this.renderHistory();
 
-        // Backend
         await API.post('create', { sheet: 'Finance', payload: JSON.stringify(payload) });
-        // Echter Reload
         await this.load();
     }
 };
