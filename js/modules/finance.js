@@ -1,7 +1,7 @@
 const FinanceModule = {
     transactions: [],
-    users: [], // Liste aller WG Bewohner
-    balances: {}, // Wer schuldet wem was
+    users: [], 
+    balances: {}, 
 
     async init(cId) {
         const container = document.getElementById(cId);
@@ -31,7 +31,6 @@ const FinanceModule = {
         if (result.status === 'success') {
             this.transactions = result.data;
             this.users = result.users || []; 
-            
             if(this.users.length === 0) this.users = [App.user.name]; 
 
             this.calculateDebts();
@@ -51,10 +50,8 @@ const FinanceModule = {
 
             if (t.type === 'expense') {
                 const splitAmount = amount / this.users.length;
-                
                 if (!bal[payer]) bal[payer] = 0;
                 bal[payer] += amount;
-
                 this.users.forEach(u => {
                     if (!bal[u]) bal[u] = 0;
                     bal[u] -= splitAmount;
@@ -62,10 +59,8 @@ const FinanceModule = {
             } 
             else if (t.type === 'payment') {
                 const recipient = t.recipient;
-                
                 if (!bal[payer]) bal[payer] = 0;
                 bal[payer] += amount;
-
                 if (!bal[recipient]) bal[recipient] = 0;
                 bal[recipient] -= amount;
             }
@@ -81,31 +76,35 @@ const FinanceModule = {
         const displayEl = document.getElementById('my-balance-display');
         const summaryEl = document.getElementById('debt-summary');
 
-        const color = myBal >= 0 ? 'var(--secondary)' : 'var(--danger)';
-        const prefix = myBal >= 0 ? '+' : '';
-        displayEl.style.color = color;
-        displayEl.innerText = `${prefix}${myBal.toFixed(2)} €`;
+        if(displayEl) {
+            const color = myBal >= 0 ? 'var(--secondary)' : 'var(--danger)';
+            const prefix = myBal >= 0 ? '+' : '';
+            displayEl.style.color = color;
+            displayEl.innerText = `${prefix}${myBal.toFixed(2)} €`;
+        }
 
-        let summaryHtml = "";
-        const sortedUsers = Object.keys(this.balances).sort((a,b) => this.balances[b] - this.balances[a]);
+        if(summaryEl) {
+            let summaryHtml = "";
+            const sortedUsers = Object.keys(this.balances).sort((a,b) => this.balances[b] - this.balances[a]);
 
-        sortedUsers.forEach(u => {
-            if (u === myName) return; 
-            const val = this.balances[u];
-            if (Math.abs(val) < 0.01) return; 
+            sortedUsers.forEach(u => {
+                if (u === myName) return; 
+                const val = this.balances[u];
+                if (Math.abs(val) < 0.01) return; 
 
-            const uColor = val >= 0 ? 'var(--secondary)' : 'var(--danger)';
-            summaryHtml += `<div style="display:flex; justify-content:space-between; margin-top:5px;">
-                <span>${u}</span>
-                <span style="color:${uColor}">${val.toFixed(2)} €</span>
-            </div>`;
-        });
-        
-        summaryEl.innerHTML = summaryHtml || "Alle sind quitt! 🎉";
+                const uColor = val >= 0 ? 'var(--secondary)' : 'var(--danger)';
+                summaryHtml += `<div style="display:flex; justify-content:space-between; margin-top:5px;">
+                    <span>${u}</span>
+                    <span style="color:${uColor}">${val.toFixed(2)} €</span>
+                </div>`;
+            });
+            summaryEl.innerHTML = summaryHtml || "Alle sind quitt! 🎉";
+        }
     },
 
     renderHistory() {
         const list = document.getElementById('finance-list');
+        if(!list) return;
         list.innerHTML = "";
         
         const history = [...this.transactions].reverse();
@@ -155,22 +154,84 @@ const FinanceModule = {
         modal.style.display = 'flex';
     },
 
-    showSettleUp() {
+    // --- NEUE INTELLIGENTE BEGLEICHEN-FUNKTION ---
+    async showSettleUp() {
         const modal = document.getElementById('finance-modal');
-        const others = this.users.filter(u => u !== App.user.name);
-        let options = others.map(u => `<option value="${u}">${u}</option>`).join('');
-
+        
+        // 1. Lade-Status anzeigen
         modal.innerHTML = `
-            <div class="modal-content">
-                <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
-                <h3>Schulden begleichen</h3>
-                <p style="font-size:0.9rem; color:#888;">Ich bezahle an:</p>
-                <select id="fin-recipient">${options}</select>
-                <input type="number" id="fin-amount" placeholder="Betrag" step="0.01">
-                <input type="hidden" id="fin-desc" value="Rückzahlung">
-                <button class="primary" style="background:var(--secondary); color:black;" onclick="FinanceModule.saveTransaction('payment')">Bezahlt markieren</button>
+            <div class="modal-content" style="text-align:center;">
+                <h3>Lade aktuelle Schulden...</h3>
+                <div style="margin:20px;">⏳</div>
             </div>`;
         modal.style.display = 'flex';
+
+        // 2. Daten frisch vom Server holen (Sicherheit!)
+        await this.load();
+
+        const myName = App.user.name;
+        const myBalance = this.balances[myName] || 0;
+
+        let contentHtml = "";
+
+        if (myBalance >= -0.01) {
+            // Keine Schulden
+            contentHtml = `
+                <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
+                <h3>Alles gut!</h3>
+                <p style="text-align:center; margin:20px 0; color:var(--secondary);">
+                    Du bist aktuell schuldenfrei (oder im Plus).<br>
+                    Keine Zahlung nötig. 🎉
+                </p>
+                <button class="primary" onclick="document.getElementById('finance-modal').style.display='none'">Schließen</button>
+            `;
+        } else {
+            // Schulden vorhanden -> Algorithmus: Wem schulde ich was?
+            // Wir zahlen einfach demjenigen, der am meisten Plus hat.
+            
+            // Creditors finden (Leute mit Plus)
+            let creditors = [];
+            for (const [user, amount] of Object.entries(this.balances)) {
+                if (amount > 0.01 && user !== myName) {
+                    creditors.push({ user, amount });
+                }
+            }
+            // Sortieren: Höchstes Plus zuerst
+            creditors.sort((a, b) => b.amount - a.amount);
+
+            if (creditors.length === 0) {
+                contentHtml = `<p>Fehler: Niemand hat Plus? System ungleichgewicht.</p>`;
+            } else {
+                const target = creditors[0];
+                // Ich zahle maximal meine Schulden oder maximal das was er kriegt
+                const payAmount = Math.min(Math.abs(myBalance), target.amount).toFixed(2);
+
+                contentHtml = `
+                    <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
+                    <h3>Schulden begleichen</h3>
+                    
+                    <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;">
+                        <p style="margin:0; color:#888; font-size:0.9rem;">Vorschlag: Überweise an</p>
+                        <h2 style="margin:5px 0; color:var(--text-main);">${target.user}</h2>
+                        <div style="font-size:2.5rem; font-weight:bold; color:var(--secondary); margin:10px 0;">
+                            ${payAmount} €
+                        </div>
+                        <p style="margin:0; font-size:0.8rem; color:#666;">Damit sind die Konten ausgeglichener.</p>
+                    </div>
+
+                    <!-- Versteckte Felder für die Logik -->
+                    <input type="hidden" id="fin-recipient" value="${target.user}">
+                    <input type="hidden" id="fin-amount" value="${payAmount}">
+                    <input type="hidden" id="fin-desc" value="Rückzahlung">
+                    
+                    <button class="primary" style="background:var(--secondary); color:black; font-weight:bold;" onclick="FinanceModule.saveTransaction('payment')">
+                        Betrag ausgeglichen (Bezahlt)
+                    </button>
+                `;
+            }
+        }
+
+        modal.innerHTML = `<div class="modal-content">${contentHtml}</div>`;
     },
 
     async saveTransaction(type) {
@@ -191,11 +252,15 @@ const FinanceModule = {
             recipient: recipient
         };
 
+        // Optimistic UI Update
         this.transactions.push(payload);
         this.calculateDebts();
         this.renderHistory();
 
+        // Backend Call
         await API.post('create', { sheet: 'Finance', payload: JSON.stringify(payload) });
+        
+        // Final Reload zur Sicherheit
         await this.load();
     }
 };
