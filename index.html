@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
-    <!-- CACHE BUSTER V11 -->
-    <link rel="stylesheet" href="style.css?v=11">
+    <!-- CACHE BUSTER V12 -->
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
     <header>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:5px;">
+             <!-- DER ZENTRALE ZURÜCK BUTTON -->
+             <button id="nav-back-btn" class="icon-btn" style="display:none; font-size:1.4rem; font-weight:bold; color:var(--primary); padding-right:15px;" onclick="window.App.showDashboard()">
+                ❮
+             </button>
              <h1 id="app-title" style="margin:0; font-size:1.2rem;">WG Hub</h1>
         </div>
         
@@ -20,7 +24,7 @@
         </div>
     </header>
 
-    <main id="app-container">
+    <main id="app-container" style="padding-top: 20px;">
         <!-- Login Screen -->
         <div id="login-screen">
             <h2>Willkommen</h2>
@@ -95,7 +99,7 @@
     <script src="js/modules/voting.js"></script>
     <script src="js/modules/sodastream.js"></script>
     <script src="js/modules/guestbook.js"></script>
-    <script src="js/modules/train.js"></script> <!-- NEU -->
+    <script src="js/modules/train.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
