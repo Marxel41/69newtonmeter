@@ -1,18 +1,24 @@
 const TrainModule = {
-    // Gespeicherte IDs oder null
+    // Die exakten Namen vom DB Navigator fest hinterlegt
+    config: {
+        origin: "Karlsruhe, Werderstraße",
+        dhbw: "Karlsruhe, Duale Hochschule",
+        hka: "Karlsruhe, Kunstakademie/Hochschule"
+    },
+
     stops: {
         origin: localStorage.getItem('wg_station_origin_id'),
         dhbw: localStorage.getItem('wg_station_dhbw_id'),
         hka: localStorage.getItem('wg_station_hka_id')
     },
-    // Standard: DHBW
+    
     currentDest: 'dhbw', 
 
     async init(cId) {
         const container = document.getElementById(cId);
         if(!container) return;
 
-        // UI Aufbau
+        // UI Aufbau (Ohne Reset Knopf, cleaner)
         container.innerHTML = `
             <div style="text-align:center; padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #333;">
                 <div style="margin-bottom:15px; font-size:0.9rem; color:var(--text-muted);">
@@ -28,21 +34,20 @@ const TrainModule = {
             <div id="train-list" style="min-height:200px;">
                 <p style="text-align:center; color:#666; margin-top:20px;">Lade Verbindungen...</p>
             </div>
-            
-            <div style="text-align:center; margin-top:20px; border-top:1px solid #333; padding-top:10px;">
-                <button onclick="TrainModule.resetSetup()" style="font-size:0.8rem; color:#555; background:none; border:none; text-decoration:underline; cursor:pointer;">Haltestellen neu suchen</button>
-            </div>
         `;
 
-        // Style für aktiven Button setzen
         this.updateButtons();
 
-        // Prüfen ob wir startklar sind
-        if (!this.stops.origin || !this.stops.dhbw || !this.stops.hka) {
-            await this.performAutoSetup();
+        // Check: Haben wir gültige IDs? Wenn nein -> Automatisch suchen
+        if (!this.isValid(this.stops.origin) || !this.isValid(this.stops.dhbw) || !this.isValid(this.stops.hka)) {
+            await this.resolveStations();
         } else {
             this.loadJourneys();
         }
+    },
+
+    isValid(id) {
+        return id && id !== "undefined" && id !== "null";
     },
 
     updateButtons() {
@@ -69,40 +74,42 @@ const TrainModule = {
         this.loadJourneys();
     },
 
-    async performAutoSetup() {
+    // Diese Funktion repariert die IDs automatisch im Hintergrund
+    async resolveStations() {
         const list = document.getElementById('train-list');
-        list.innerHTML = "<p style='text-align:center; color:#888;'>Richte Haltestellen ein...</p>";
+        list.innerHTML = "<p style='text-align:center; color:#888;'>Konfiguriere Haltestellen...</p>";
 
         try {
-            // Wir suchen gezielt nach den Karlsruher Haltestellen mit den korrekten Namen
+            // Parallelsuche nach den exakten Namen
             const [s1, s2, s3] = await Promise.all([
-                this.findStation("Karlsruhe Werderstraße"),
-                this.findStation("Karlsruhe Duale Hochschule"), // DHBW
-                this.findStation("Karlsruhe Kunstakademie / Hochschule") // HKA
+                this.findStation(this.config.origin),
+                this.findStation(this.config.dhbw),
+                this.findStation(this.config.hka)
             ]);
 
             if (s1 && s2 && s3) {
+                // Speichern
                 this.stops = { origin: s1.id, dhbw: s2.id, hka: s3.id };
                 localStorage.setItem('wg_station_origin_id', s1.id);
                 localStorage.setItem('wg_station_dhbw_id', s2.id);
                 localStorage.setItem('wg_station_hka_id', s3.id);
+                
+                // Sofort laden
                 this.loadJourneys();
             } else {
-                list.innerHTML = "<p style='color:var(--danger); text-align:center;'>Konnte Haltestellen nicht automatisch finden.<br><button onclick='TrainModule.performAutoSetup()' class='primary' style='margin-top:10px; width:auto;'>Nochmal versuchen</button></p>";
+                list.innerHTML = "<p style='color:var(--danger); text-align:center;'>Fehler: Konnte Haltestellen nicht finden.<br>API evtl. überlastet?</p>";
             }
         } catch (e) {
-            list.innerHTML = "<p style='color:var(--danger); text-align:center;'>Verbindungsfehler bei der Einrichtung.</p>";
+            list.innerHTML = "<p style='color:var(--danger); text-align:center;'>Verbindungsfehler bei Einrichtung.</p>";
         }
     },
 
     async findStation(query) {
-        try {
-            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=1`;
-            const res = await fetch(url);
-            const data = await res.json();
-            // Wir nehmen das erste Ergebnis, falls vorhanden
-            return data[0] ? { id: data[0].id, name: data[0].name } : null;
-        } catch(e) { return null; }
+        // Wir suchen spezifisch nach "stops" (Haltestellen), nicht generisch locations
+        const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=1&poi=false&addresses=false`;
+        const res = await fetch(url);
+        const data = await res.json();
+        return data[0] ? { id: data[0].id, name: data[0].name } : null;
     },
 
     async loadJourneys() {
@@ -113,26 +120,22 @@ const TrainModule = {
 
         const destID = this.currentDest === 'dhbw' ? this.stops.dhbw : this.stops.hka;
         
-        if(!this.stops.origin || !destID) {
-            list.innerHTML = "<p style='text-align:center; color:#888;'>Haltestellen fehlen. Bitte Reset drücken.</p>";
-            return;
-        }
-        
         try {
-            // Wir suchen Verbindungen ab JETZT
-            const url = `https://v6.db.transport.rest/journeys?from=${this.stops.origin}&to=${destID}&results=4`;
+            const url = `https://v6.db.transport.rest/journeys?from=${this.stops.origin}&to=${destID}&results=4&transfers=0`;
             const response = await fetch(url);
             const data = await response.json();
 
             list.innerHTML = "";
             
             if (!data.journeys || data.journeys.length === 0) {
-                list.innerHTML = "<p style='text-align:center;'>Keine Verbindung gefunden.</p>";
+                // Falls keine Verbindung gefunden wurde (z.B. falsche IDs), erzwingen wir beim nächsten Mal einen neuen Scan
+                list.innerHTML = "<p style='text-align:center;'>Keine Verbindung gefunden.<br><small>Versuche Auto-Reparatur...</small></p>";
+                localStorage.removeItem('wg_station_origin_id'); // IDs löschen damit init() sie neu sucht
+                setTimeout(() => this.resolveStations(), 2000);
                 return;
             }
 
             data.journeys.forEach(trip => {
-                // Wir betrachten nur den ersten Abschnitt (Leg), da es meist Direktverbindungen in KA sind
                 const leg = trip.legs[0]; 
                 if(!leg) return;
 
@@ -140,10 +143,7 @@ const TrainModule = {
                 const arrTime = new Date(leg.arrival);
                 const now = new Date();
                 
-                // Minuten bis Abfahrt
                 const minutesToDep = Math.floor((depTime - now) / 60000);
-                
-                // Abgefahrene Bahnen ignorieren (Toleranz -1 Min)
                 if (minutesToDep < -1) return; 
 
                 const timeStr = depTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -151,14 +151,14 @@ const TrainModule = {
                 const lineName = leg.line && leg.line.name ? leg.line.name : 'Bahn';
                 const direction = leg.direction || 'Richtung ?';
                 
-                // Farb-Logik
+                // Ampel Farben
                 let badgeColor = '#333';
                 let badgeText = 'white';
                 
-                if (minutesToDep <= 0) { badgeColor = '#555'; } // Jetzt/Weg
-                else if (minutesToDep <= 3) { badgeColor = 'var(--danger)'; } // Lauf!
-                else if (minutesToDep <= 7) { badgeColor = 'var(--warn)'; badgeText='black'; } // Bald
-                else { badgeColor = 'var(--secondary)'; badgeText='black'; } // Zeit
+                if (minutesToDep <= 0) { badgeColor = '#555'; }
+                else if (minutesToDep <= 3) { badgeColor = 'var(--danger)'; }
+                else if (minutesToDep <= 7) { badgeColor = 'var(--warn)'; badgeText='black'; }
+                else { badgeColor = 'var(--secondary)'; badgeText='black'; }
 
                 list.innerHTML += `
                     <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
@@ -181,26 +181,10 @@ const TrainModule = {
                     </div>
                 `;
             });
-            
-            // Wenn nach Filterung leer
-            if(list.innerHTML === "") {
-                list.innerHTML = "<p style='text-align:center;'>Keine Abfahrten in den nächsten Minuten.</p>";
-            }
 
         } catch (e) {
             console.error(e);
-            list.innerHTML = "<p style='color:var(--danger); text-align:center;'>Verbindung zur Bahn-API fehlgeschlagen.</p>";
-        }
-    },
-    
-    resetSetup() {
-        if(confirm("Haltestellen neu suchen?")) {
-            localStorage.removeItem('wg_station_origin_id');
-            localStorage.removeItem('wg_station_dhbw_id');
-            localStorage.removeItem('wg_station_hka_id');
-            this.stops = { origin: null, dhbw: null, hka: null };
-            // Neu initialisieren
-            this.init(document.getElementById('train-list').parentElement.parentElement.id);
+            list.innerHTML = "<p style='color:var(--danger); text-align:center;'>API Fehler. Bitte später versuchen.</p>";
         }
     }
 };
