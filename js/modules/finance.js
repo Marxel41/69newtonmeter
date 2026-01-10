@@ -2,10 +2,82 @@ const FinanceModule = {
     transactions: [],
     users: [], 
     balances: {}, 
+    
+    // ==========================================
+    // 🔧 HARDCODED FIXKOSTEN (HIER ÄNDERN!)
+    // ==========================================
+    // Trage hier die monatlichen Gesamtkosten der WG ein:
+    fixedCosts: {
+        rent: 1300,       // Miete (Gesamt)
+        utilities: 200,   // Nebenkosten
+        internet: 25,     // Internet
+        power: 19         // Strom
+    },
+    // ==========================================
+
+    currentView: 'split', // 'split' oder 'stats'
 
     async init(cId) {
         const container = document.getElementById(cId);
+        this.cId = cId;
         
+        // Check: Gibt es lokale Änderungen? Wenn ja, überschreiben sie den Hardcode.
+        // Wenn du willst, dass der Hardcode IMMER gewinnt, lösche diesen Block:
+        const savedFixed = localStorage.getItem('wg_finance_fixed');
+        if(savedFixed) {
+            // Optionale Zeile: Entferne "//" am Anfang der nächsten Zeile, um Hardcode zu erzwingen und Speicher zu ignorieren
+            // localStorage.removeItem('wg_finance_fixed'); 
+            this.fixedCosts = JSON.parse(savedFixed);
+        }
+
+        this.renderShell();
+        await this.load();
+    },
+
+    renderShell() {
+        const container = document.getElementById(this.cId);
+        
+        const navHtml = `
+            <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
+                <button onclick="FinanceModule.switchView('split')" id="btn-view-split" style="flex:1; padding:8px; border-radius:8px; border:1px solid #444; background:${this.currentView === 'split' ? 'var(--primary)' : 'transparent'}; color:${this.currentView === 'split' ? 'black' : 'var(--text-muted)'}; cursor:pointer;">Abrechnung</button>
+                <button onclick="FinanceModule.switchView('stats')" id="btn-view-stats" style="flex:1; padding:8px; border-radius:8px; border:1px solid #444; background:${this.currentView === 'stats' ? 'var(--primary)' : 'transparent'}; color:${this.currentView === 'stats' ? 'black' : 'var(--text-muted)'}; cursor:pointer;">Monatsübersicht</button>
+            </div>
+            <div id="finance-content"></div>
+        `;
+        container.innerHTML = navHtml;
+    },
+
+    switchView(view) {
+        this.currentView = view;
+        this.renderShell(); 
+        
+        if (view === 'split') {
+            this.renderSplitView();
+        } else {
+            this.renderStatsView();
+        }
+    },
+
+    async load() {
+        const result = await API.post('read', { sheet: 'Finance', _t: Date.now() });
+        
+        if (result.status === 'success') {
+            this.transactions = result.data;
+            this.users = result.users || []; 
+            if(this.users.length === 0) this.users = [App.user.name]; 
+
+            this.calculateDebts();
+            
+            if (this.currentView === 'split') this.renderSplitView();
+            else this.renderStatsView();
+        } else {
+            document.getElementById('finance-content').innerHTML = "Fehler beim Laden.";
+        }
+    },
+
+    // --- VIEW 1: SPLITWISE ---
+    renderSplitView() {
+        const container = document.getElementById('finance-content');
         container.innerHTML = `
             <div class="add-box" style="background:var(--card-bg); padding:20px; border-radius:12px; margin-bottom:20px; text-align:center;">
                 <h3 style="margin-top:0; color:var(--text-muted);">Dein Stand</h3>
@@ -19,25 +91,154 @@ const FinanceModule = {
             </div>
 
             <h3 style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;">Verlauf</h3>
-            <div id="finance-list">Lade Finanzen...</div>
+            <div id="finance-list"></div>
         `;
-
-        await this.load();
+        
+        this.renderOverview();
+        this.renderHistory();
     },
 
-    async load() {
-        const result = await API.post('read', { sheet: 'Finance', _t: Date.now() });
+    // --- VIEW 2: MONATSÜBERSICHT ---
+    renderStatsView() {
+        const container = document.getElementById('finance-content');
         
-        if (result.status === 'success') {
-            this.transactions = result.data;
-            this.users = result.users || []; 
-            if(this.users.length === 0) this.users = [App.user.name]; 
+        let html = `
+            <div style="text-align:right; margin-bottom:10px;">
+                <button onclick="FinanceModule.showFixedCostSettings()" style="background:transparent; border:1px solid #555; color:var(--text-muted); font-size:0.8rem; padding:5px 10px; border-radius:15px; cursor:pointer;">⚙️ Werte anpassen</button>
+            </div>
+            <div id="stats-list"></div>
+        `;
+        container.innerHTML = html;
 
-            this.calculateDebts();
-            this.renderHistory();
-        } else {
-            document.getElementById('finance-list').innerHTML = "Fehler beim Laden.";
+        const monthlyData = {}; 
+
+        this.transactions.forEach(t => {
+            if (t.type === 'expense') {
+                const date = new Date(t.date);
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                
+                if (!monthlyData[key]) monthlyData[key] = 0;
+                monthlyData[key] += parseFloat(t.amount);
+            }
+        });
+
+        const sortedMonths = Object.keys(monthlyData).sort().reverse();
+        const listDiv = document.getElementById('stats-list');
+
+        if (sortedMonths.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; color:#666;'>Noch keine Ausgaben vorhanden.</p>";
+            return;
         }
+
+        sortedMonths.forEach(monthKey => {
+            const variableCosts = monthlyData[monthKey];
+            const fixedSum = this.fixedCosts.rent + this.fixedCosts.utilities + this.fixedCosts.internet + this.fixedCosts.power;
+            const total = variableCosts + fixedSum;
+            
+            const [y, m] = monthKey.split('-');
+            const monthName = new Date(y, m - 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+
+            listDiv.innerHTML += `
+                <div class="list-item" style="display:block; cursor:pointer;" onclick="FinanceModule.toggleMonthDetails('${monthKey}')">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>${monthName}</strong>
+                        <span style="font-weight:bold;">${total.toFixed(2)} €</span>
+                    </div>
+                    <div id="details-${monthKey}" style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:15px;">
+                        ${this.generatePieChartHTML(variableCosts)}
+                    </div>
+                </div>
+            `;
+        });
+    },
+
+    toggleMonthDetails(id) {
+        const el = document.getElementById(`details-${id}`);
+        if (el) {
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+    },
+
+    generatePieChartHTML(variableCosts) {
+        const data = [
+            { label: 'Miete', value: this.fixedCosts.rent, color: '#FF6384' },
+            { label: 'Nebenk', value: this.fixedCosts.utilities, color: '#36A2EB' },
+            { label: 'Netz', value: this.fixedCosts.internet, color: '#FFCE56' },
+            { label: 'Strom', value: this.fixedCosts.power, color: '#4BC0C0' },
+            { label: 'Sonstiges', value: variableCosts, color: '#9966FF' }
+        ];
+
+        const total = data.reduce((sum, item) => sum + item.value, 0);
+        if (total === 0) return "Keine Daten";
+
+        let currentDeg = 0;
+        const gradientParts = data.map(item => {
+            const deg = (item.value / total) * 360;
+            const part = `${item.color} ${currentDeg}deg ${currentDeg + deg}deg`;
+            currentDeg += deg;
+            return part;
+        });
+
+        const chartStyle = `
+            width: 140px; height: 140px; border-radius: 50%; 
+            background: conic-gradient(${gradientParts.join(', ')});
+            margin: 0 auto;
+        `;
+
+        const legendHtml = data.map(item => `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
+                <span style="display:flex; align-items:center;">
+                    <span style="width:8px; height:8px; background:${item.color}; display:inline-block; margin-right:5px; border-radius:2px;"></span>
+                    ${item.label}
+                </span>
+                <span>${item.value.toFixed(0)} €</span>
+            </div>
+        `).join('');
+
+        return `
+            <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap; justify-content:center;">
+                <div style="${chartStyle}"></div>
+                <div style="flex:1; min-width:130px;">${legendHtml}</div>
+            </div>
+        `;
+    },
+
+    // Einstellungen Dialog (falls man doch mal ändern will)
+    showFixedCostSettings() {
+        const modal = document.getElementById('finance-modal');
+        modal.innerHTML = `
+            <div class="modal-content">
+                <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
+                <h3>Fixkosten (Lokal)</h3>
+                <p style="color:#888; font-size:0.8rem; margin-bottom:15px;">
+                    Änderungen werden nur auf diesem Gerät gespeichert.<br>
+                    Um sie für alle zu ändern, muss der Code angepasst werden.
+                </p>
+                
+                <label style="font-size:0.8rem;">Miete</label>
+                <input type="number" id="fc-rent" value="${this.fixedCosts.rent}">
+                <label style="font-size:0.8rem;">Nebenkosten</label>
+                <input type="number" id="fc-util" value="${this.fixedCosts.utilities}">
+                <label style="font-size:0.8rem;">Internet</label>
+                <input type="number" id="fc-net" value="${this.fixedCosts.internet}">
+                <label style="font-size:0.8rem;">Strom</label>
+                <input type="number" id="fc-pow" value="${this.fixedCosts.power}">
+                
+                <button class="primary" onclick="FinanceModule.saveFixedCosts()">Lokal Speichern</button>
+            </div>`;
+        modal.style.display = 'flex';
+    },
+
+    saveFixedCosts() {
+        this.fixedCosts = {
+            rent: parseFloat(document.getElementById('fc-rent').value) || 0,
+            utilities: parseFloat(document.getElementById('fc-util').value) || 0,
+            internet: parseFloat(document.getElementById('fc-net').value) || 0,
+            power: parseFloat(document.getElementById('fc-pow').value) || 0
+        };
+        localStorage.setItem('wg_finance_fixed', JSON.stringify(this.fixedCosts));
+        document.getElementById('finance-modal').style.display = 'none';
+        this.renderStatsView(); 
     },
 
     calculateDebts() {
@@ -67,7 +268,7 @@ const FinanceModule = {
         });
 
         this.balances = bal;
-        this.renderOverview();
+        if (this.currentView === 'split') this.renderOverview();
     },
 
     renderOverview() {
@@ -106,23 +307,16 @@ const FinanceModule = {
         const list = document.getElementById('finance-list');
         if(!list) return;
         list.innerHTML = "";
-        
         const history = [...this.transactions].reverse();
 
         history.forEach(t => {
             const isExpense = t.type === 'expense';
             const icon = isExpense ? '💸' : '🤝';
             const amountClass = isExpense ? 'color:var(--text-main)' : 'color:var(--secondary)';
-            
             let dateStr = "";
             try { dateStr = new Date(t.date).toLocaleDateString(); } catch(e){}
 
-            let details = "";
-            if (isExpense) {
-                details = `bezahlt von <strong>${t.payer}</strong>`;
-            } else {
-                details = `<strong>${t.payer}</strong> ➔ <strong>${t.recipient}</strong>`;
-            }
+            let details = isExpense ? `bezahlt von <strong>${t.payer}</strong>` : `<strong>${t.payer}</strong> ➔ <strong>${t.recipient}</strong>`;
 
             list.innerHTML += `
                 <div class="list-item">
@@ -154,83 +348,52 @@ const FinanceModule = {
         modal.style.display = 'flex';
     },
 
-    // --- NEUE INTELLIGENTE BEGLEICHEN-FUNKTION ---
     async showSettleUp() {
         const modal = document.getElementById('finance-modal');
-        
-        // 1. Lade-Status anzeigen
-        modal.innerHTML = `
-            <div class="modal-content" style="text-align:center;">
-                <h3>Lade aktuelle Schulden...</h3>
-                <div style="margin:20px;">⏳</div>
-            </div>`;
+        modal.innerHTML = `<div class="modal-content" style="text-align:center;"><h3>Lade...</h3><div style="margin:20px;">⏳</div></div>`;
         modal.style.display = 'flex';
 
-        // 2. Daten frisch vom Server holen (Sicherheit!)
-        await this.load();
+        await this.load(); // Refresh Data
 
         const myName = App.user.name;
         const myBalance = this.balances[myName] || 0;
-
         let contentHtml = "";
 
         if (myBalance >= -0.01) {
-            // Keine Schulden
             contentHtml = `
                 <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
                 <h3>Alles gut!</h3>
-                <p style="text-align:center; margin:20px 0; color:var(--secondary);">
-                    Du bist aktuell schuldenfrei (oder im Plus).<br>
-                    Keine Zahlung nötig. 🎉
-                </p>
+                <p style="text-align:center; margin:20px 0; color:var(--secondary);">Du bist schuldenfrei.<br>🎉</p>
                 <button class="primary" onclick="document.getElementById('finance-modal').style.display='none'">Schließen</button>
             `;
         } else {
-            // Schulden vorhanden -> Algorithmus: Wem schulde ich was?
-            // Wir zahlen einfach demjenigen, der am meisten Plus hat.
-            
-            // Creditors finden (Leute mit Plus)
             let creditors = [];
             for (const [user, amount] of Object.entries(this.balances)) {
-                if (amount > 0.01 && user !== myName) {
-                    creditors.push({ user, amount });
-                }
+                if (amount > 0.01 && user !== myName) creditors.push({ user, amount });
             }
-            // Sortieren: Höchstes Plus zuerst
             creditors.sort((a, b) => b.amount - a.amount);
 
             if (creditors.length === 0) {
-                contentHtml = `<p>Fehler: Niemand hat Plus? System ungleichgewicht.</p>`;
+                contentHtml = `<p>Fehler: Ungleichgewicht im System.</p>`;
             } else {
                 const target = creditors[0];
-                // Ich zahle maximal meine Schulden oder maximal das was er kriegt
                 const payAmount = Math.min(Math.abs(myBalance), target.amount).toFixed(2);
 
                 contentHtml = `
                     <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
                     <h3>Schulden begleichen</h3>
-                    
                     <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;">
-                        <p style="margin:0; color:#888; font-size:0.9rem;">Vorschlag: Überweise an</p>
+                        <p style="margin:0; color:#888; font-size:0.9rem;">Überweise an</p>
                         <h2 style="margin:5px 0; color:var(--text-main);">${target.user}</h2>
-                        <div style="font-size:2.5rem; font-weight:bold; color:var(--secondary); margin:10px 0;">
-                            ${payAmount} €
-                        </div>
-                        <p style="margin:0; font-size:0.8rem; color:#666;">Damit sind die Konten ausgeglichener.</p>
+                        <div style="font-size:2.5rem; font-weight:bold; color:var(--secondary); margin:10px 0;">${payAmount} €</div>
                     </div>
-
-                    <!-- Versteckte Felder für die Logik -->
                     <input type="hidden" id="fin-recipient" value="${target.user}">
                     <input type="hidden" id="fin-amount" value="${payAmount}">
                     <input type="hidden" id="fin-desc" value="Rückzahlung">
-                    
-                    <button class="primary" style="background:var(--secondary); color:black; font-weight:bold;" onclick="FinanceModule.saveTransaction('payment')">
-                        Betrag ausgeglichen (Bezahlt)
-                    </button>
+                    <button class="primary" style="background:var(--secondary); color:black; font-weight:bold;" onclick="FinanceModule.saveTransaction('payment')">Betrag ausgeglichen</button>
                 `;
             }
         }
-
         modal.innerHTML = `<div class="modal-content">${contentHtml}</div>`;
     },
 
@@ -252,15 +415,12 @@ const FinanceModule = {
             recipient: recipient
         };
 
-        // Optimistic UI Update
         this.transactions.push(payload);
         this.calculateDebts();
-        this.renderHistory();
+        if (this.currentView === 'split') this.renderHistory();
+        else this.renderStatsView();
 
-        // Backend Call
         await API.post('create', { sheet: 'Finance', payload: JSON.stringify(payload) });
-        
-        // Final Reload zur Sicherheit
         await this.load();
     }
 };
