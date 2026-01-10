@@ -66,26 +66,31 @@ const TasksModule = {
             let isMyTask = isLocked && task.assignee === App.user.name;
 
             let rowClass = "";
-            let actionBtn = "";
+            let actionHtml = "";
             let infoText = "";
-
-            // Punkte Anzeige (ohne Datum)
             let pointsDisplay = `<small style="color:var(--text-muted)">${task.points} Pkt</small>`;
 
             if (!isLocked) {
-                actionBtn = `<button class="check-btn" onclick="TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted);">✋</button>`;
+                // FALL 1: Frei -> BEIDE Optionen (Reservieren UND Abschließen)
+                actionHtml = `
+                    <div style="display:flex; gap:10px;">
+                        <button class="check-btn" onclick="TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted); font-size:1rem;">✋</button>
+                        <button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>
+                    </div>`;
             } 
             else if (isMyTask) {
+                // FALL 2: Mir zugewiesen -> Nur Abschließen
                 rowClass = "task-assigned-me";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--secondary); font-size:0.8rem; display:block;">⏳ ${minsLeft} Min. reserviert</span>`;
-                actionBtn = `<button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>`;
+                actionHtml = `<button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>`;
             } 
             else {
+                // FALL 3: Blockiert -> Schloss
                 rowClass = "task-assigned-other";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--danger); font-size:0.8rem; display:block;">🔒 ${task.assignee} (${minsLeft} Min)</span>`;
-                actionBtn = `<span style="font-size:1.5rem; opacity:0.5;">🔒</span>`;
+                actionHtml = `<span style="font-size:1.5rem; opacity:0.5;">🔒</span>`;
             }
 
             listDiv.innerHTML += `
@@ -95,7 +100,7 @@ const TasksModule = {
                         ${pointsDisplay}
                         ${infoText}
                     </div>
-                    ${actionBtn}
+                    ${actionHtml}
                 </div>`;
         });
     },
