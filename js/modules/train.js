@@ -1,119 +1,130 @@
 const TrainModule = {
-    // Default Namen für die Inputs
-    defaults: {
-        origin: "Karlsruhe Werderstraße",
-        dhbw: "Karlsruhe Erzbergerstraße", // Offizieller Name
-        hka: "Karlsruhe Europaplatz"
-    },
-
     stops: {
         origin: localStorage.getItem('wg_station_origin_id'),
         dhbw: localStorage.getItem('wg_station_dhbw_id'),
         hka: localStorage.getItem('wg_station_hka_id')
     },
-    
+    names: {
+        origin: localStorage.getItem('wg_station_origin_name') || 'Start',
+        dhbw: localStorage.getItem('wg_station_dhbw_name') || 'DHBW',
+        hka: localStorage.getItem('wg_station_hka_name') || 'HKA'
+    },
     currentDest: 'dhbw', 
 
     async init(cId) {
         const container = document.getElementById(cId);
         if(!container) return;
 
-        // Wenn noch keine Stationen konfiguriert sind -> Setup Modus
-        if (!this.isValid(this.stops.origin) || !this.isValid(this.stops.dhbw) || !this.isValid(this.stops.hka)) {
+        // Wenn noch nicht alles konfiguriert ist, zeigen wir das Setup
+        if (!this.stops.origin || !this.stops.dhbw || !this.stops.hka) {
             this.renderSetup(container);
         } else {
             this.renderView(container);
         }
     },
 
-    isValid(id) {
-        return id && id !== "undefined" && id !== "null" && id.length > 0;
-    },
-
-    // --- VIEW 1: SETUP ---
+    // --- VIEW 1: MANUELLES SETUP ---
     renderSetup(container) {
         container.innerHTML = `
-            <div style="padding: 20px; text-align: center;">
-                <h3 style="color:var(--text-main); margin-bottom:10px;">Bahn Konfiguration</h3>
-                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">
-                    Die automatische Suche war nicht erfolgreich.<br>
-                    Bitte bestätige die Haltestellen:
+            <div style="padding: 10px;">
+                <h3 style="color:var(--text-main); margin-bottom:10px; text-align:center;">Bahn Einrichtung</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem; text-align:center; margin-bottom:20px;">
+                    Suche deine Haltestellen und weise sie zu.
                 </p>
 
-                <div style="text-align:left; margin-bottom:15px;">
-                    <label style="font-size:0.8rem; color:#888;">Start3 (Zuhause)</label>
-                    <input type="text" id="setup-origin" value="${this.defaults.origin}">
+                <!-- STATUS ANZEIGE -->
+                <div style="background:var(--card-bg); padding:10px; border-radius:8px; margin-bottom:20px; font-size:0.85rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span>🏠 Start:</span> 
+                        <strong style="color:${this.stops.origin ? 'var(--secondary)' : 'var(--danger)'}">${this.names.origin}</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span>🎓 DHBW:</span> 
+                        <strong style="color:${this.stops.dhbw ? 'var(--secondary)' : 'var(--danger)'}">${this.names.dhbw}</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>🏛️ HKA:</span> 
+                        <strong style="color:${this.stops.hka ? 'var(--secondary)' : 'var(--danger)'}">${this.names.hka}</strong>
+                    </div>
                 </div>
 
-                <div style="text-align:left; margin-bottom:15px;">
-                    <label style="font-size:0.8rem; color:#888;">Ziel 1 (DHBW)</label>
-                    <input type="text" id="setup-dhbw" value="${this.defaults.dhbw}">
+                <!-- SUCHE -->
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <input type="text" id="setup-search" placeholder="z.B. Karlsruhe Werder" style="margin:0;">
+                    <button class="primary" onclick="TrainModule.searchAPI()" style="width:auto; margin:0;">🔍</button>
                 </div>
+                
+                <div id="setup-results"></div>
 
-                <div style="text-align:left; margin-bottom:20px;">
-                    <label style="font-size:0.8rem; color:#888;">Ziel 2 (HKA)</label>
-                    <input type="text" id="setup-hka" value="${this.defaults.hka}">
-                </div>
-
-                <button class="primary" onclick="TrainModule.runSetup()">Stationen suchen & speichern</button>
-                <div id="setup-status" style="margin-top:10px; font-size:0.9rem;"></div>
+                <!-- FERTIG BUTTON -->
+                <button id="btn-finish-setup" class="primary" onclick="TrainModule.finishSetup()" style="margin-top:20px; display:${(this.stops.origin && this.stops.dhbw && this.stops.hka) ? 'block' : 'none'}">
+                    Speichern & Fertig
+                </button>
             </div>
         `;
     },
 
-    async runSetup() {
-        const status = document.getElementById('setup-status');
-        const originName = document.getElementById('setup-origin').value;
-        const dhbwName = document.getElementById('setup-dhbw').value;
-        const hkaName = document.getElementById('setup-hka').value;
-
-        status.innerHTML = "<span style='color:var(--secondary);'>Suche läuft...</span>";
+    async searchAPI() {
+        const query = document.getElementById('setup-search').value;
+        const resDiv = document.getElementById('setup-results');
         
+        if(!query) return;
+        resDiv.innerHTML = "<p style='text-align:center; color:#888;'>Suche...</p>";
+
         try {
-            const [s1, s2, s3] = await Promise.all([
-                this.findStation(originName),
-                this.findStation(dhbwName),
-                this.findStation(hkaName)
-            ]);
+            // Wir suchen sehr breit (results=10) um sicherzugehen
+            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=10&poi=false&addresses=false`;
+            const res = await fetch(url);
+            const data = await res.json();
 
-            if (!s1) { status.innerHTML = `<span style='color:var(--danger);'>Start "${originName}" nicht gefunden.</span>`; return; }
-            if (!s2) { status.innerHTML = `<span style='color:var(--danger);'>Ziel 1 "${dhbwName}" nicht gefunden.</span>`; return; }
-            if (!s3) { status.innerHTML = `<span style='color:var(--danger);'>Ziel 2 "${hkaName}" nicht gefunden.</span>`; return; }
+            resDiv.innerHTML = "";
+            if(data.length === 0) {
+                resDiv.innerHTML = "<p style='text-align:center;'>Nichts gefunden.</p>";
+                return;
+            }
 
-            // Speichern
-            this.stops = { origin: s1.id, dhbw: s2.id, hka: s3.id };
-            localStorage.setItem('wg_station_origin_id', s1.id);
-            localStorage.setItem('wg_station_dhbw_id', s2.id);
-            localStorage.setItem('wg_station_hka_id', s3.id);
-            
-            // Namen merken für Anzeige
-            localStorage.setItem('wg_station_origin_name', s1.name);
+            data.forEach(stop => {
+                if(stop.type === 'stop' || stop.type === 'station') {
+                    resDiv.innerHTML += `
+                        <div style="background:#333; padding:10px; border-radius:8px; margin-bottom:10px;">
+                            <div style="font-weight:bold; color:white;">${stop.name}</div>
+                            <div style="display:flex; gap:5px; margin-top:8px;">
+                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'origin')" style="flex:1; padding:5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als Start</button>
+                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'dhbw')" style="flex:1; padding:5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als DHBW</button>
+                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'hka')" style="flex:1; padding:5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als HKA</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
 
-            status.innerHTML = "<span style='color:var(--secondary);'>Gefunden! Lade...</span>";
-            setTimeout(() => this.init(document.getElementById('train-cont').id), 1000); // Reload Module
-
-        } catch (e) {
-            status.innerHTML = `<span style='color:var(--danger);'>API Fehler: ${e.message}</span>`;
+        } catch(e) {
+            resDiv.innerHTML = `<p style='color:var(--danger); text-align:center;'>API Fehler: ${e.message}</p>`;
         }
     },
 
-    async findStation(query) {
-        // Wir nutzen den 'stations' endpoint für klarere Ergebnisse, fallback auf locations
-        // Versuch 1: Exact Match Suche
-        const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=3&poi=false&addresses=false`;
-        const res = await fetch(url);
-        const data = await res.json();
-        return data.find(x => x.type === 'station' || x.type === 'stop') || null;
+    assign(id, name, type) {
+        this.stops[type] = id;
+        this.names[type] = name;
+        
+        localStorage.setItem(`wg_station_${type}_id`, id);
+        localStorage.setItem(`wg_station_${type}_name`, name);
+        
+        // UI Update (Reload Setup View)
+        this.init(document.getElementById('train-list') ? document.getElementById('train-list').parentElement.parentElement.id : 'train-cont');
     },
 
-    // --- VIEW 2: ABFAHRTEN ---
+    finishSetup() {
+        // UI neu laden -> springt in renderView
+        this.init(document.getElementById('setup-results').parentElement.parentElement.id);
+    },
+
+    // --- VIEW 2: ABFAHRTEN (Normaler Modus) ---
     renderView(container) {
-        const startName = localStorage.getItem('wg_station_origin_name') || "Werderstraße";
-        
         container.innerHTML = `
             <div style="text-align:center; padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #333;">
                 <div style="margin-bottom:15px; font-size:0.9rem; color:var(--text-muted);">
-                    Start: <strong style="color:var(--text-main);">${startName}</strong>
+                    Start: <strong style="color:var(--text-main);">${this.names.origin}</strong>
                 </div>
                 
                 <div style="background:var(--card-bg); border:1px solid #333; border-radius:12px; padding:5px; display:inline-flex; gap:5px;">
@@ -184,7 +195,7 @@ const TrainModule = {
                 const now = new Date();
                 
                 const minutesToDep = Math.floor((depTime - now) / 60000);
-                if (minutesToDep < -1) return; 
+                if (minutesToDep < -5) return; // Zu alt
 
                 const timeStr = depTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const lineName = leg.line && leg.line.name ? leg.line.name : 'Bahn';
@@ -230,7 +241,14 @@ const TrainModule = {
         localStorage.removeItem('wg_station_origin_id');
         localStorage.removeItem('wg_station_dhbw_id');
         localStorage.removeItem('wg_station_hka_id');
+        localStorage.removeItem('wg_station_origin_name');
+        localStorage.removeItem('wg_station_dhbw_name');
+        localStorage.removeItem('wg_station_hka_name');
         this.stops = { origin: null, dhbw: null, hka: null };
-        this.init(document.getElementById('train-list').parentElement.parentElement.id);
+        this.names = { origin: 'Start', dhbw: 'DHBW', hka: 'HKA' };
+        
+        // Reload Container
+        const cont = document.getElementById('train-list') ? document.getElementById('train-list').parentElement.parentElement : document.getElementById('train-cont');
+        if(cont) this.init(cont.id);
     }
 };
