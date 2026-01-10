@@ -48,42 +48,86 @@ const TasksModule = {
         const listDiv = document.getElementById('actual-list');
         listDiv.innerHTML = "";
         
-        // Filterlogik:
-        // 'cleaning' -> Nur Putzaufgaben
-        // 'todo' -> Alles was NICHT Putzen ist (also Allgemeine & Einkaufen tasks aus dem Autosystem)
         const filtered = this.tasks.filter(t => {
             if(filterType === 'cleaning') return t.type === 'cleaning';
             if(filterType === 'todo') return t.type !== 'cleaning'; 
             return true;
         });
 
-        if(filtered.length === 0) { listDiv.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>Alles erledigt! 🎉</p>"; return; }
+        if(filtered.length === 0) { listDiv.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>Nichts offen. 🎉</p>"; return; }
+
+        const now = new Date().getTime();
 
         filtered.forEach(task => {
+            let assignTime = task.assigned_at ? new Date(task.assigned_at).getTime() : 0;
+            let hoursPassed = (now - assignTime) / (1000 * 60 * 60);
+            
+            let isLocked = task.assignee && hoursPassed < 2;
+            let isMyTask = isLocked && task.assignee === App.user.name;
+
+            let rowClass = "";
+            let actionBtn = "";
+            let infoText = "";
+
+            // Punkte Anzeige (ohne Datum)
+            let pointsDisplay = `<small style="color:var(--text-muted)">${task.points} Pkt</small>`;
+
+            if (!isLocked) {
+                actionBtn = `<button class="check-btn" onclick="TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted);">✋</button>`;
+            } 
+            else if (isMyTask) {
+                rowClass = "task-assigned-me";
+                let minsLeft = Math.round((2 - hoursPassed) * 60);
+                infoText = `<span style="color:var(--secondary); font-size:0.8rem; display:block;">⏳ ${minsLeft} Min. reserviert</span>`;
+                actionBtn = `<button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>`;
+            } 
+            else {
+                rowClass = "task-assigned-other";
+                let minsLeft = Math.round((2 - hoursPassed) * 60);
+                infoText = `<span style="color:var(--danger); font-size:0.8rem; display:block;">🔒 ${task.assignee} (${minsLeft} Min)</span>`;
+                actionBtn = `<span style="font-size:1.5rem; opacity:0.5;">🔒</span>`;
+            }
+
             listDiv.innerHTML += `
-                <div class="list-item" id="row-${task.id}">
+                <div class="list-item ${rowClass}" id="row-${task.id}">
                     <div class="task-info">
                         <strong>${task.title}</strong>
-                        <small style="color:var(--text-muted)">${task.date} • ${task.points} Pkt</small>
+                        ${pointsDisplay}
+                        ${infoText}
                     </div>
-                    <button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>
+                    ${actionBtn}
                 </div>`;
         });
     },
 
-    // OPTIMISTIC UI LOGIK (Jetzt garantiert für ALLE Listen aktiv)
+    async assignTask(id) {
+        const row = document.getElementById(`row-${id}`);
+        if(row) row.style.opacity = '0.5';
+
+        const timestamp = new Date().toISOString();
+        
+        await API.post('update', { 
+            sheet: 'Tasks', 
+            id: id, 
+            updates: JSON.stringify({ 
+                assignee: App.user.name,
+                assigned_at: timestamp
+            }) 
+        });
+        
+        const isCleaning = document.querySelector('h2') && document.querySelector('h2').innerText.includes('Putzplan');
+        await this.loadTasks(isCleaning ? 'cleaning' : 'todo');
+    },
+
     handleCheck(id) {
         const btn = document.getElementById(`btn-${id}`);
         if(!btn) return;
 
         if (btn.classList.contains('confirm-wait')) {
-            // Bestätigt -> Weg damit
             this.completeTaskOptimistic(id);
         } else {
-            // Erster Klick -> Warnung
             btn.classList.add('confirm-wait');
             btn.innerHTML = "✖";
-            
             this.clickTimer[id] = setTimeout(() => {
                 btn.classList.remove('confirm-wait');
                 btn.innerHTML = "✔";
@@ -95,13 +139,11 @@ const TasksModule = {
     async completeTaskOptimistic(id) {
         const row = document.getElementById(`row-${id}`);
         if(row) {
-            // Animation
             row.style.transition = "all 0.5s ease";
             row.style.opacity = "0";
             row.style.transform = "translateX(50px)";
             setTimeout(() => row.remove(), 500);
         }
-
         if(this.clickTimer[id]) clearTimeout(this.clickTimer[id]);
 
         await API.post('update', { 
