@@ -38,8 +38,24 @@ const TasksModule = {
         const listDiv = document.getElementById('actual-list');
         if(!listDiv) return;
         const result = await API.post('read', { sheet: 'Tasks', _t: Date.now() });
+        
         if (result.status === 'success') {
-            this.tasks = result.data.filter(t => t.status === 'open');
+            const todayStr = new Date().toISOString().split('T')[0];
+            const currentHour = new Date().getHours();
+
+            this.tasks = result.data.filter(t => {
+                if (t.status !== 'open') return false;
+
+                // --- ZEIT FILTER (erst ab 10 Uhr) ---
+                if (t.date > todayStr) return false; // Zukunft ausblenden
+                if (t.date === todayStr) {
+                    // Wenn heute: Erst ab 10 Uhr anzeigen!
+                    if (currentHour < 10) return false;
+                }
+                // Überfällige (date < todayStr) immer anzeigen
+                return true;
+            });
+            
             this.render(filterType);
         }
     },
@@ -71,7 +87,6 @@ const TasksModule = {
             let pointsDisplay = `<small style="color:var(--text-muted)">${task.points} Pkt</small>`;
 
             if (!isLocked) {
-                // FALL 1: Frei -> BEIDE Optionen (Reservieren UND Abschließen)
                 actionHtml = `
                     <div style="display:flex; gap:10px;">
                         <button class="check-btn" onclick="TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted); font-size:1rem;">✋</button>
@@ -79,14 +94,12 @@ const TasksModule = {
                     </div>`;
             } 
             else if (isMyTask) {
-                // FALL 2: Mir zugewiesen -> Nur Abschließen
                 rowClass = "task-assigned-me";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--secondary); font-size:0.8rem; display:block;">⏳ ${minsLeft} Min. reserviert</span>`;
                 actionHtml = `<button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>`;
             } 
             else {
-                // FALL 3: Blockiert -> Schloss
                 rowClass = "task-assigned-other";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--danger); font-size:0.8rem; display:block;">🔒 ${task.assignee} (${minsLeft} Min)</span>`;
