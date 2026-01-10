@@ -52,7 +52,6 @@ const App = {
         if(loginScreen) loginScreen.style.display = 'none';
         
         const container = document.getElementById('app-container');
-        
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
 
@@ -68,9 +67,7 @@ const App = {
             </div>
         `;
         
-        if(typeof GuestbookModule !== 'undefined') {
-            GuestbookModule.init('guest-view', true);
-        }
+        if(typeof GuestbookModule !== 'undefined') GuestbookModule.init('guest-view', true);
     },
 
     logout() { localStorage.removeItem('wg_user'); location.reload(); },
@@ -90,10 +87,10 @@ const App = {
         const c = document.getElementById('app-container');
         c.innerHTML = `
             <div class="dashboard-grid">
-                <div class="tile" onclick="window.App.loadModule('finance')"><span>💸</span><h3>Finanzen</h3></div>
                 <div class="tile" onclick="window.App.loadModule('todo')"><span>📌</span><h3>To-Dos</h3></div>
                 <div class="tile" onclick="window.App.loadModule('cleaning')"><span>🧹</span><h3>Putzplan</h3></div>
                 <div class="tile" onclick="window.App.loadModule('shopping')"><span>🛒</span><h3>Einkauf</h3></div>
+                <div class="tile" onclick="window.App.loadModule('finance')"><span>💸</span><h3>Finanzen</h3></div>
                 <div class="tile" onclick="window.App.loadModule('voting')"><span>🗳️</span><h3>Votes</h3></div>
                 <div class="tile" onclick="window.App.loadModule('soda')"><span>💧</span><h3>Soda</h3></div>
                 <div class="tile" onclick="window.App.loadModule('train')"><span>🚋</span><h3>Bahn</h3></div>
