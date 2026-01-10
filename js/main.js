@@ -21,8 +21,6 @@ const App = {
             try { this.user = JSON.parse(savedUser); this.showDashboard(); } 
             catch (e) { localStorage.removeItem('wg_user'); }
         }
-
-        // Benachrichtigungs-Service deaktiviert
     },
 
     async login() {
@@ -50,10 +48,7 @@ const App = {
     },
 
     enterGuestMode() {
-        // Sicherer Check für Login Screen
-        const loginScreen = document.getElementById('login-screen');
-        if(loginScreen) loginScreen.style.display = 'none';
-        
+        document.getElementById('login-screen').style.display = 'none';
         const container = document.getElementById('app-container');
         
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
@@ -79,12 +74,8 @@ const App = {
     logout() { localStorage.removeItem('wg_user'); location.reload(); },
 
     showDashboard() {
-        // Modal-Fenster schließen
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        
-        // BUG FIX: Prüfen ob Login-Screen existiert, bevor wir darauf zugreifen
-        const loginScreen = document.getElementById('login-screen');
-        if(loginScreen) loginScreen.style.display = 'none';
+        document.getElementById('login-screen').style.display = 'none';
         
         const sBtn = document.getElementById('settings-btn');
         if(sBtn) sBtn.style.display = 'block';
@@ -100,6 +91,9 @@ const App = {
                 <div class="tile" onclick="window.App.loadModule('shopping')"><span>🛒</span><h3>Einkauf</h3></div>
                 <div class="tile" onclick="window.App.loadModule('voting')"><span>🗳️</span><h3>Votes</h3></div>
                 <div class="tile" onclick="window.App.loadModule('soda')"><span>💧</span><h3>Soda</h3></div>
+                <!-- NEU: Bahn Tile -->
+                <div class="tile" onclick="window.App.loadModule('train')"><span>🚋</span><h3>Bahn</h3></div>
+                
                 <div class="tile" onclick="window.App.loadModule('guestbook')"><span>📖</span><h3>Gästebuch</h3></div>
                 
                 <div class="tile wide" onclick="window.App.loadModule('ranking')">
@@ -146,18 +140,18 @@ const App = {
             container.innerHTML = shell('Gästebuch', 'gb-cont'); 
             GuestbookModule.init('gb-cont', false); 
         }
+        else if (moduleName === 'train') { 
+            container.innerHTML = shell('Abfahrten', 'train-cont'); 
+            TrainModule.init('train-cont'); 
+        }
     },
     
     toggleSettings() {
         const modal = document.getElementById('settings-modal');
         if(modal) modal.style.display = 'flex';
-        // Wir setzen nur den Status visual, keine Funktion dahinter
-        const cb = document.querySelector('#settings-modal input[type="checkbox"]');
-        if(cb) cb.checked = (localStorage.getItem('wg_notif_enabled') === 'true');
     },
 
     toggleNotifications() {
-        // Speichert nur die Präferenz, aber startet keinen Service mehr
         const cb = document.querySelector('#settings-modal input[type="checkbox"]');
         if(cb) localStorage.setItem('wg_notif_enabled', cb.checked);
     }
