@@ -1,11 +1,12 @@
 const TrainModule = {
-    // Die exakten Namen vom DB Navigator fest hinterlegt
+    // Konfiguration der Namen
     config: {
         origin: "Karlsruhe, Werderstraße",
-        dhbw: "Karlsruhe, Duale Hochschule",
-        hka: "Karlsruhe, Kunstakademie/Hochschule"
+        dhbw: "Karlsruhe, Erzbergerstraße", // Oft zuverlässiger als 'Duale Hochschule' in der API
+        hka: "Karlsruhe, Europaplatz/Postgalerie" // Zentraler Knotenpunkt für HKA
     },
 
+    // Gespeicherte IDs laden
     stops: {
         origin: localStorage.getItem('wg_station_origin_id'),
         dhbw: localStorage.getItem('wg_station_dhbw_id'),
@@ -18,7 +19,7 @@ const TrainModule = {
         const container = document.getElementById(cId);
         if(!container) return;
 
-        // UI Aufbau (Ohne Reset Knopf, cleaner)
+        // UI Aufbau
         container.innerHTML = `
             <div style="text-align:center; padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #333;">
                 <div style="margin-bottom:15px; font-size:0.9rem; color:var(--text-muted);">
@@ -38,8 +39,9 @@ const TrainModule = {
 
         this.updateButtons();
 
-        // Check: Haben wir gültige IDs? Wenn nein -> Automatisch suchen
+        // VALIDIERUNG: Sind die IDs gültig?
         if (!this.isValid(this.stops.origin) || !this.isValid(this.stops.dhbw) || !this.isValid(this.stops.hka)) {
+            console.log("IDs fehlen oder ungültig, starte Setup...");
             await this.resolveStations();
         } else {
             this.loadJourneys();
@@ -47,7 +49,8 @@ const TrainModule = {
     },
 
     isValid(id) {
-        return id && id !== "undefined" && id !== "null";
+        // Prüft ob ID existiert und kein String "null"/"undefined" ist
+        return id && id !== "undefined" && id !== "null" && id.length > 0;
     },
 
     updateButtons() {
@@ -74,13 +77,12 @@ const TrainModule = {
         this.loadJourneys();
     },
 
-    // Diese Funktion repariert die IDs automatisch im Hintergrund
     async resolveStations() {
         const list = document.getElementById('train-list');
-        list.innerHTML = "<p style='text-align:center; color:#888;'>Konfiguriere Haltestellen...</p>";
+        list.innerHTML = "<p style='text-align:center; color:#888;'>Suche Haltestellen IDs...</p>";
 
         try {
-            // Parallelsuche nach den exakten Namen
+            // Wir suchen die IDs
             const [s1, s2, s3] = await Promise.all([
                 this.findStation(this.config.origin),
                 this.findStation(this.config.dhbw),
@@ -88,28 +90,44 @@ const TrainModule = {
             ]);
 
             if (s1 && s2 && s3) {
-                // Speichern
+                // IDs speichern
                 this.stops = { origin: s1.id, dhbw: s2.id, hka: s3.id };
                 localStorage.setItem('wg_station_origin_id', s1.id);
                 localStorage.setItem('wg_station_dhbw_id', s2.id);
                 localStorage.setItem('wg_station_hka_id', s3.id);
                 
-                // Sofort laden
+                // Erfolg! Laden.
                 this.loadJourneys();
             } else {
-                list.innerHTML = "<p style='color:var(--danger); text-align:center;'>Fehler: Konnte Haltestellen nicht finden.<br>API evtl. überlastet?</p>";
+                let errorDetails = "";
+                if(!s1) errorDetails += "Werderstr nicht gefunden. ";
+                if(!s2) errorDetails += "DHBW nicht gefunden. ";
+                if(!s3) errorDetails += "HKA nicht gefunden. ";
+                
+                list.innerHTML = `
+                    <div style='color:var(--danger); text-align:center; padding:20px;'>
+                        <p>Einrichtung fehlgeschlagen:</p>
+                        <small>${errorDetails}</small>
+                        <br><br>
+                        <button onclick='TrainModule.resolveStations()' class='primary' style='width:auto;'>Nochmal versuchen</button>
+                    </div>`;
             }
         } catch (e) {
-            list.innerHTML = "<p style='color:var(--danger); text-align:center;'>Verbindungsfehler bei Einrichtung.</p>";
+            list.innerHTML = `<p style='color:var(--danger); text-align:center;'>Netzwerkfehler: ${e.message}</p>`;
         }
     },
 
     async findStation(query) {
-        // Wir suchen spezifisch nach "stops" (Haltestellen), nicht generisch locations
-        const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=1&poi=false&addresses=false`;
-        const res = await fetch(url);
-        const data = await res.json();
-        return data[0] ? { id: data[0].id, name: data[0].name } : null;
+        try {
+            // fuzzy=true hilft bei ungenauen Namen
+            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=1&poi=false&addresses=false&fuzzy=true`;
+            const res = await fetch(url);
+            const data = await res.json();
+            return data[0] ? { id: data[0].id, name: data[0].name } : null;
+        } catch(e) { 
+            console.error("Fehler bei Suche nach " + query, e);
+            return null; 
+        }
     },
 
     async loadJourneys() {
@@ -120,18 +138,29 @@ const TrainModule = {
 
         const destID = this.currentDest === 'dhbw' ? this.stops.dhbw : this.stops.hka;
         
+        // Sicherheitscheck
+        if(!this.isValid(this.stops.origin) || !this.isValid(destID)) {
+            this.forceReset("Ungültige Station-IDs gespeichert.");
+            return;
+        }
+        
         try {
-            const url = `https://v6.db.transport.rest/journeys?from=${this.stops.origin}&to=${destID}&results=4&transfers=0`;
+            // Transfers auf 1 erhöhen falls keine Direktverbindung
+            const url = `https://v6.db.transport.rest/journeys?from=${this.stops.origin}&to=${destID}&results=4&transfers=1`;
             const response = await fetch(url);
+            
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            
             const data = await response.json();
 
             list.innerHTML = "";
             
             if (!data.journeys || data.journeys.length === 0) {
-                // Falls keine Verbindung gefunden wurde (z.B. falsche IDs), erzwingen wir beim nächsten Mal einen neuen Scan
-                list.innerHTML = "<p style='text-align:center;'>Keine Verbindung gefunden.<br><small>Versuche Auto-Reparatur...</small></p>";
-                localStorage.removeItem('wg_station_origin_id'); // IDs löschen damit init() sie neu sucht
-                setTimeout(() => this.resolveStations(), 2000);
+                list.innerHTML = `
+                    <div style="text-align:center; padding:20px;">
+                        <p>Keine Verbindung gefunden.</p>
+                        <button onclick="TrainModule.forceReset()" style="color:var(--text-muted); background:none; border:none; text-decoration:underline; cursor:pointer;">Reset & Neu suchen</button>
+                    </div>`;
                 return;
             }
 
@@ -144,21 +173,22 @@ const TrainModule = {
                 const now = new Date();
                 
                 const minutesToDep = Math.floor((depTime - now) / 60000);
+                
+                // Zeige auch Züge die gerade (vor 1 min) abgefahren sind
                 if (minutesToDep < -1) return; 
 
                 const timeStr = depTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const arrStr = arrTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const lineName = leg.line && leg.line.name ? leg.line.name : 'Bahn';
                 const direction = leg.direction || 'Richtung ?';
                 
-                // Ampel Farben
                 let badgeColor = '#333';
                 let badgeText = 'white';
+                let statusText = minutesToDep + "'";
                 
-                if (minutesToDep <= 0) { badgeColor = '#555'; }
-                else if (minutesToDep <= 3) { badgeColor = 'var(--danger)'; }
-                else if (minutesToDep <= 7) { badgeColor = 'var(--warn)'; badgeText='black'; }
-                else { badgeColor = 'var(--secondary)'; badgeText='black'; }
+                if (minutesToDep <= 0) { badgeColor = '#555'; statusText = "Weg"; }
+                else if (minutesToDep <= 3) { badgeColor = 'var(--danger)'; statusText = "Lauf!"; }
+                else if (minutesToDep <= 7) { badgeColor = 'var(--warn)'; badgeText='black'; statusText = minutesToDep + " min"; }
+                else { badgeColor = 'var(--secondary)'; badgeText='black'; statusText = minutesToDep + " min"; }
 
                 list.innerHTML += `
                     <div class="list-item" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
@@ -169,13 +199,13 @@ const TrainModule = {
                             <div style="display:flex; flex-direction:column; overflow:hidden;">
                                 <span style="font-weight:bold; font-size:1.1rem; white-space:nowrap;">${timeStr}</span>
                                 <small style="color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                    an ${arrStr} • ${direction}
+                                    ${direction}
                                 </small>
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <span style="background:${badgeColor}; color:${badgeText}; padding:6px 12px; border-radius:15px; font-weight:bold; font-size:0.9rem; display:inline-block; min-width:50px; text-align:center;">
-                                ${minutesToDep <= 0 ? 'Run' : minutesToDep + '\''}
+                            <span style="background:${badgeColor}; color:${badgeText}; padding:6px 12px; border-radius:15px; font-weight:bold; font-size:0.9rem; display:inline-block; min-width:60px; text-align:center;">
+                                ${statusText}
                             </span>
                         </div>
                     </div>
@@ -184,7 +214,21 @@ const TrainModule = {
 
         } catch (e) {
             console.error(e);
-            list.innerHTML = "<p style='color:var(--danger); text-align:center;'>API Fehler. Bitte später versuchen.</p>";
+            list.innerHTML = `
+                <div style='color:var(--danger); text-align:center; padding:20px;'>
+                    <p>Fehler: ${e.message}</p>
+                    <button onclick="TrainModule.forceReset()" class="primary" style="margin-top:10px;">Reparieren (Reset)</button>
+                </div>`;
         }
+    },
+    
+    // Notfall-Reset, der immer funktioniert
+    forceReset(msg) {
+        if(msg) alert(msg);
+        localStorage.removeItem('wg_station_origin_id');
+        localStorage.removeItem('wg_station_dhbw_id');
+        localStorage.removeItem('wg_station_hka_id');
+        this.stops = { origin: null, dhbw: null, hka: null };
+        this.init(document.getElementById('train-list').parentElement.parentElement.id);
     }
 };
