@@ -1,4 +1,4 @@
-/* VERSION: 9.0 - CLICK FIX */
+/* VERSION: 10.1 - STYLES CLEANUP */
 
 /* CORE APP STYLES */
 :root {
@@ -34,20 +34,33 @@ header {
     align-items: center;
     height: 60px;
 }
+
+/* Header Actions (Name + Settings nebeneinander) */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#user-info {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 5px; }
 
-/* LOGIN SCREEN - EXTREM WICHTIG */
+/* LOGIN SCREEN */
 #login-screen {
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 50px 20px;
-    gap: 20px; /* Mehr Abstand */
+    gap: 20px; 
     position: relative;
-    z-index: 5000; /* Muss über allem liegen */
+    z-index: 5000; 
     background-color: var(--bg-color);
     min-height: 100vh;
-    pointer-events: auto !important; /* Klicks erzwingen */
+    pointer-events: auto !important; 
 }
 
 /* Login Buttons */
@@ -55,7 +68,7 @@ header {
     pointer-events: auto !important;
     cursor: pointer !important;
     position: relative;
-    z-index: 5001; /* Noch höher als der Screen */
+    z-index: 5001; 
 }
 
 /* Dashboard Grid */
