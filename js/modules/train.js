@@ -1,12 +1,11 @@
 const TrainModule = {
-    // Konfiguration: Exakte Namen aus dem DB Navigator (Ort vorangestellt für Eindeutigkeit)
+    // Konfiguration: Primäre Namen + Fallbacks falls die API zickt
     config: {
-        origin: "Karlsruhe Werderstraße",
-        dhbw: "Karlsruhe Duale Hochschule", 
-        hka: "Karlsruhe Kunstakademie/Hochschule"
+        origin: ["Werderstraße, Karlsruhe", "Karlsruhe Werderstr."],
+        dhbw: ["Duale Hochschule, Karlsruhe", "Karlsruhe Erzbergerstraße"], 
+        hka: ["Kunstakademie/Hochschule, Karlsruhe", "Karlsruhe Mühlburger Tor (Grashofstr.)"]
     },
 
-    // Gespeicherte IDs laden
     stops: {
         origin: localStorage.getItem('wg_station_origin_id'),
         dhbw: localStorage.getItem('wg_station_dhbw_id'),
@@ -39,9 +38,8 @@ const TrainModule = {
 
         this.updateButtons();
 
-        // VALIDIERUNG: Sind die IDs gültig?
+        // Validierung: Wenn IDs fehlen, Setup starten
         if (!this.isValid(this.stops.origin) || !this.isValid(this.stops.dhbw) || !this.isValid(this.stops.hka)) {
-            console.log("IDs fehlen oder ungültig, starte Setup...");
             await this.resolveStations();
         } else {
             this.loadJourneys();
@@ -49,7 +47,6 @@ const TrainModule = {
     },
 
     isValid(id) {
-        // Prüft ob ID existiert und kein String "null"/"undefined" ist
         return id && id !== "undefined" && id !== "null" && id.length > 0;
     },
 
@@ -82,27 +79,33 @@ const TrainModule = {
         list.innerHTML = "<p style='text-align:center; color:#888;'>Suche Haltestellen IDs...</p>";
 
         try {
-            // Wir suchen die IDs
+            // Helper Funktion um Liste von Namen zu probieren
+            const tryFind = async (names) => {
+                for (let name of names) {
+                    const res = await this.findStation(name);
+                    if (res) return res;
+                }
+                return null;
+            };
+
             const [s1, s2, s3] = await Promise.all([
-                this.findStation(this.config.origin),
-                this.findStation(this.config.dhbw),
-                this.findStation(this.config.hka)
+                tryFind(this.config.origin),
+                tryFind(this.config.dhbw),
+                tryFind(this.config.hka)
             ]);
 
             if (s1 && s2 && s3) {
-                // IDs speichern
                 this.stops = { origin: s1.id, dhbw: s2.id, hka: s3.id };
                 localStorage.setItem('wg_station_origin_id', s1.id);
                 localStorage.setItem('wg_station_dhbw_id', s2.id);
                 localStorage.setItem('wg_station_hka_id', s3.id);
                 
-                // Erfolg! Laden.
                 this.loadJourneys();
             } else {
                 let errorDetails = "";
-                if(!s1) errorDetails += `"${this.config.origin}" nicht gefunden. `;
-                if(!s2) errorDetails += `"${this.config.dhbw}" nicht gefunden. `;
-                if(!s3) errorDetails += `"${this.config.hka}" nicht gefunden. `;
+                if(!s1) errorDetails += "Werderstr nicht gefunden. ";
+                if(!s2) errorDetails += "DHBW nicht gefunden. ";
+                if(!s3) errorDetails += "HKA nicht gefunden. ";
                 
                 list.innerHTML = `
                     <div style='color:var(--danger); text-align:center; padding:20px;'>
@@ -119,18 +122,15 @@ const TrainModule = {
 
     async findStation(query) {
         try {
-            // Wir entfernen strikte Filter, um mehr Ergebnisse zu bekommen
-            // fuzzy=true hilft bei ungenauen Namen
-            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=3&fuzzy=true`;
+            // results=10 erhöht Chance, dass die Haltestelle dabei ist (und nicht nur Adressen)
+            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=10&fuzzy=true`;
             const res = await fetch(url);
             const data = await res.json();
             
-            // Wir suchen den ersten Eintrag, der ein Bahnhof oder eine Haltestelle ist
+            // Suche ersten echten Stop
             const station = data.find(loc => loc.type === 'station' || loc.type === 'stop');
-            
             return station ? { id: station.id, name: station.name } : null;
         } catch(e) { 
-            console.error("Fehler bei Suche nach " + query, e);
             return null; 
         }
     },
@@ -143,14 +143,12 @@ const TrainModule = {
 
         const destID = this.currentDest === 'dhbw' ? this.stops.dhbw : this.stops.hka;
         
-        // Sicherheitscheck
         if(!this.isValid(this.stops.origin) || !this.isValid(destID)) {
             this.forceReset("Ungültige Station-IDs gespeichert.");
             return;
         }
         
         try {
-            // Transfers auf 1 erhöhen falls keine Direktverbindung
             const url = `https://v6.db.transport.rest/journeys?from=${this.stops.origin}&to=${destID}&results=4&transfers=1`;
             const response = await fetch(url);
             
@@ -179,7 +177,6 @@ const TrainModule = {
                 
                 const minutesToDep = Math.floor((depTime - now) / 60000);
                 
-                // Zeige auch Züge die gerade (vor 1 min) abgefahren sind
                 if (minutesToDep < -1) return; 
 
                 const timeStr = depTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -227,7 +224,6 @@ const TrainModule = {
         }
     },
     
-    // Notfall-Reset, der immer funktioniert
     forceReset(msg) {
         if(msg) alert(msg);
         localStorage.removeItem('wg_station_origin_id');
