@@ -1,9 +1,9 @@
 const TrainModule = {
-    // Konfiguration der Namen
+    // Konfiguration: Exakte Namen aus dem DB Navigator (Ort vorangestellt für Eindeutigkeit)
     config: {
-        origin: "Karlsruhe, Werderstraße",
-        dhbw: "Karlsruhe, Erzbergerstraße", // Oft zuverlässiger als 'Duale Hochschule' in der API
-        hka: "Karlsruhe, Europaplatz/Postgalerie" // Zentraler Knotenpunkt für HKA
+        origin: "Karlsruhe Werderstraße",
+        dhbw: "Karlsruhe Duale Hochschule", 
+        hka: "Karlsruhe Kunstakademie/Hochschule"
     },
 
     // Gespeicherte IDs laden
@@ -100,9 +100,9 @@ const TrainModule = {
                 this.loadJourneys();
             } else {
                 let errorDetails = "";
-                if(!s1) errorDetails += "Werderstr nicht gefunden. ";
-                if(!s2) errorDetails += "DHBW nicht gefunden. ";
-                if(!s3) errorDetails += "HKA nicht gefunden. ";
+                if(!s1) errorDetails += `"${this.config.origin}" nicht gefunden. `;
+                if(!s2) errorDetails += `"${this.config.dhbw}" nicht gefunden. `;
+                if(!s3) errorDetails += `"${this.config.hka}" nicht gefunden. `;
                 
                 list.innerHTML = `
                     <div style='color:var(--danger); text-align:center; padding:20px;'>
@@ -119,11 +119,16 @@ const TrainModule = {
 
     async findStation(query) {
         try {
+            // Wir entfernen strikte Filter, um mehr Ergebnisse zu bekommen
             // fuzzy=true hilft bei ungenauen Namen
-            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=1&poi=false&addresses=false&fuzzy=true`;
+            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=3&fuzzy=true`;
             const res = await fetch(url);
             const data = await res.json();
-            return data[0] ? { id: data[0].id, name: data[0].name } : null;
+            
+            // Wir suchen den ersten Eintrag, der ein Bahnhof oder eine Haltestelle ist
+            const station = data.find(loc => loc.type === 'station' || loc.type === 'stop');
+            
+            return station ? { id: station.id, name: station.name } : null;
         } catch(e) { 
             console.error("Fehler bei Suche nach " + query, e);
             return null; 
