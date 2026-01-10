@@ -22,7 +22,7 @@ const TrainModule = {
         container.innerHTML = `
             <div style="text-align:center; padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #333;">
                 <div style="margin-bottom:15px; font-size:0.9rem; color:var(--text-muted);">
-                    Start: <strong style="color:var(--text-main);">Werderstraße</strong>
+                    Start1: <strong style="color:var(--text-main);">Werderstraße</strong>
                 </div>
                 
                 <div style="background:var(--card-bg); border:1px solid #333; border-radius:12px; padding:5px; display:inline-flex; gap:5px;">
