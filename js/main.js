@@ -1,5 +1,20 @@
 const App = {
     user: null,
+    editMode: false,
+    swapSource: null,
+
+    // Konfiguration aller Kacheln
+    tiles: [
+        { id: 'todo', icon: '📌', title: 'To-Dos', wide: false },
+        { id: 'cleaning', icon: '🧹', title: 'Putzplan', wide: false },
+        { id: 'shopping', icon: '🛒', title: 'Einkauf', wide: false },
+        { id: 'finance', icon: '💸', title: 'Finanzen', wide: false },
+        { id: 'voting', icon: '🗳️', title: 'Votes', wide: false },
+        { id: 'soda', icon: '💧', title: 'Soda', wide: false },
+        { id: 'train', icon: '🚋', title: 'Bahn', wide: false },
+        { id: 'guestbook', icon: '📖', title: 'Gästebuch', wide: false },
+        { id: 'ranking', icon: '🏆', title: 'Ranking', wide: true, subtitle: 'Details >' }
+    ],
 
     init() {
         window.App = this; 
@@ -52,6 +67,7 @@ const App = {
         if(loginScreen) loginScreen.style.display = 'none';
         
         const container = document.getElementById('app-container');
+        
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
 
@@ -67,10 +83,57 @@ const App = {
             </div>
         `;
         
-        if(typeof GuestbookModule !== 'undefined') GuestbookModule.init('guest-view', true);
+        if(typeof GuestbookModule !== 'undefined') {
+            GuestbookModule.init('guest-view', true);
+        }
     },
 
     logout() { localStorage.removeItem('wg_user'); location.reload(); },
+
+    // --- DASHBOARD & SORTIERUNG LOGIK ---
+
+    getTileOrder() {
+        const stored = localStorage.getItem('wg_tile_order');
+        if (stored) return JSON.parse(stored);
+        return this.tiles.map(t => t.id);
+    },
+
+    saveTileOrder(order) {
+        localStorage.setItem('wg_tile_order', JSON.stringify(order));
+    },
+
+    toggleEditMode() {
+        this.editMode = !this.editMode;
+        this.swapSource = null;
+        this.showDashboard();
+    },
+
+    handleTileClick(id) {
+        // Modus 1: Normal -> Öffnen
+        if (!this.editMode) {
+            this.loadModule(id);
+            return;
+        }
+
+        // Modus 2: Edit -> Tauschen
+        if (!this.swapSource) {
+            this.swapSource = id; // Erste Wahl
+            this.showDashboard();
+        } else {
+            // Zweite Wahl -> Tausch
+            const currentOrder = this.getTileOrder();
+            const idx1 = currentOrder.indexOf(this.swapSource);
+            const idx2 = currentOrder.indexOf(id);
+
+            if (idx1 > -1 && idx2 > -1) {
+                [currentOrder[idx1], currentOrder[idx2]] = [currentOrder[idx2], currentOrder[idx1]];
+                this.saveTileOrder(currentOrder);
+            }
+            
+            this.swapSource = null;
+            this.showDashboard();
+        }
+    },
 
     showDashboard() {
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
@@ -78,30 +141,65 @@ const App = {
         const loginScreen = document.getElementById('login-screen');
         if(loginScreen) loginScreen.style.display = 'none';
         
-        const sBtn = document.getElementById('settings-btn');
-        if(sBtn) sBtn.style.display = 'block';
+        // Header Reset
+        const backBtn = document.getElementById('nav-back-btn');
+        if(backBtn) { backBtn.style.display = 'none'; backBtn.onclick = () => this.showDashboard(); }
+        const setBtn = document.getElementById('settings-btn');
+        if(setBtn) setBtn.style.display = 'block';
+        
+        const title = document.getElementById('app-title');
+        if(title) title.innerText = "WG Hub";
         
         const userInfo = document.getElementById('user-info');
         if (userInfo && this.user) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
         
         const c = document.getElementById('app-container');
-        c.innerHTML = `
-            <div class="dashboard-grid">
-                <div class="tile" onclick="window.App.loadModule('todo')"><span>📌</span><h3>To-Dos</h3></div>
-                <div class="tile" onclick="window.App.loadModule('cleaning')"><span>🧹</span><h3>Putzplan</h3></div>
-                <div class="tile" onclick="window.App.loadModule('shopping')"><span>🛒</span><h3>Einkauf</h3></div>
-                <div class="tile" onclick="window.App.loadModule('finance')"><span>💸</span><h3>Finanzen</h3></div>
-                <div class="tile" onclick="window.App.loadModule('voting')"><span>🗳️</span><h3>Votes</h3></div>
-                <div class="tile" onclick="window.App.loadModule('soda')"><span>💧</span><h3>Soda</h3></div>
-                <div class="tile" onclick="window.App.loadModule('train')"><span>🚋</span><h3>Bahn</h3></div>
-                <div class="tile" onclick="window.App.loadModule('guestbook')"><span>📖</span><h3>Gästebuch</h3></div>
-                
-                <div class="tile wide" onclick="window.App.loadModule('ranking')">
-                    <div style="display:flex;width:100%;justify-content:space-between;align-items:center;">
-                         <div style="display:flex;align-items:center;"><span>🏆</span><h3 style="margin-left:10px;">Ranking</h3></div>
-                         <small style="color:#03dac6">Details ></small>
-                    </div>
+        
+        // Sortierung anwenden
+        const order = this.getTileOrder();
+        const sortedTiles = this.tiles.slice().sort((a, b) => {
+            let idxA = order.indexOf(a.id);
+            let idxB = order.indexOf(b.id);
+            if(idxA === -1) idxA = 999;
+            if(idxB === -1) idxB = 999;
+            return idxA - idxB;
+        });
+
+        // HTML generieren
+        let tilesHtml = "";
+        sortedTiles.forEach(tile => {
+            const isSelected = this.swapSource === tile.id;
+            const editClass = this.editMode ? (isSelected ? 'tile-selected' : 'tile-edit') : '';
+            
+            let content = "";
+            if (tile.wide) {
+                content = `
+                    <div style="display:flex;width:100%;justify-content:space-between;align-items:center;pointer-events:none;">
+                         <div style="display:flex;align-items:center;"><span>${tile.icon}</span><h3 style="margin-left:10px;">${tile.title}</h3></div>
+                         <small style="color:#03dac6">${tile.subtitle || ''}</small>
+                    </div>`;
+            } else {
+                content = `<span style="pointer-events:none;">${tile.icon}</span><h3 style="pointer-events:none;">${tile.title}</h3>`;
+            }
+
+            tilesHtml += `
+                <div class="tile ${tile.wide ? 'wide' : ''} ${editClass}" onclick="window.App.handleTileClick('${tile.id}')">
+                    ${content}
                 </div>
+            `;
+        });
+
+        const editBtnText = this.editMode ? "✅ Fertig" : "✎ Anordnen";
+        const editBtnStyle = this.editMode ? "color:var(--secondary); border-color:var(--secondary);" : "color:#666; border-color:#444;";
+
+        c.innerHTML = `
+            <div style="padding: 0 15px; text-align:right;">
+                <button onclick="window.App.toggleEditMode()" style="background:transparent; border:1px solid; border-radius:15px; padding:5px 10px; font-size:0.8rem; cursor:pointer; ${editBtnStyle}">
+                    ${editBtnText}
+                </button>
+            </div>
+            <div class="dashboard-grid">
+                ${tilesHtml}
             </div>
             <div style="padding:15px;"><div id="calendar-wrapper"></div></div>
         `;
@@ -110,20 +208,29 @@ const App = {
     },
 
     loadModule(moduleName) {
-        const sBtn = document.getElementById('settings-btn');
-        if(sBtn) sBtn.style.display = 'none';
+        // Header anpassen
+        const backBtn = document.getElementById('nav-back-btn');
+        if(backBtn) backBtn.style.display = 'block';
+        const setBtn = document.getElementById('settings-btn');
+        if(setBtn) setBtn.style.display = 'none';
         
+        // Titel setzen (Fallback auf Modul ID falls Name nicht gefunden)
+        const activeTile = this.tiles.find(t => t.id === moduleName);
+        const titleText = activeTile ? activeTile.title : 'Modul';
+        const titleEl = document.getElementById('app-title');
+        if(titleEl) titleEl.innerText = titleText;
+
         const container = document.getElementById('app-container');
         
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
         
-        const shell = (title, id) => `
+        const shell = (t, id) => `
             <div style="${headerStyle}">
                 <button onclick="window.App.showDashboard()" style="${btnStyle}">
                     <span style="font-size: 1.4rem; margin-right: 8px;">❮</span> Startseite
                 </button>
-                <span style="margin-left: 15px; color: #888; border-left: 1px solid #555; padding-left: 15px;">${title}</span>
+                <span style="margin-left: 15px; color: #888; border-left: 1px solid #555; padding-left: 15px;">${t}</span>
             </div>
             <div class="module-container" style="padding-top: 10px;">
                 <div id="${id}">Lade...</div>
