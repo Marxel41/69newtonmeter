@@ -1,6 +1,6 @@
 const ShoppingModule = {
     items: [],
-    clickTimer: {}, // Timer für Doppelklicks
+    clickTimer: {},
 
     async init(cId) {
         const container = document.getElementById(cId);
@@ -15,10 +15,8 @@ const ShoppingModule = {
     },
 
     async load() {
-        // Cache-Buster gegen alte Daten
         const result = await API.post('read', { sheet: 'Shopping', _t: Date.now() });
         if (result.status === 'success') {
-            // Nur offene Items
             this.items = result.data.filter(i => i.status === 'open');
             this.render();
         } else {
@@ -36,34 +34,27 @@ const ShoppingModule = {
         }
 
         this.items.forEach(item => {
-            // Wir brauchen IDs für die Animation (shop-row-...)
             list.innerHTML += `
                 <div class="list-item" id="shop-row-${item.id}">
                     <div style="display:flex; flex-direction:column;">
                         <span style="font-weight:500;">${item.item}</span>
-                        <small style='color:var(--text-muted)'>Hinzugefügt von ${item.added_by}</small>
+                        <!-- Cleaner Look: Keine Zusatzinfos mehr -->
                     </div>
-                    <!-- Gleiche Button-Logik wie bei Tasks -->
                     <button id="shop-btn-${item.id}" class="check-btn" onclick="ShoppingModule.handleCheck('${item.id}')">✔</button>
                 </div>`;
         });
     },
 
-    // --- NEUE LOGIK (Kopie aus Tasks) ---
     handleCheck(id) {
         const btn = document.getElementById(`shop-btn-${id}`);
         if(!btn) return;
 
-        // Status prüfen
         if (btn.classList.contains('confirm-wait')) {
-            // ZWEITER KLICK -> SOFORT WEG
             this.finishItemOptimistic(id);
         } else {
-            // ERSTER KLICK -> WARNUNG (Gelb)
             btn.classList.add('confirm-wait');
-            btn.innerHTML = "✖"; // Kreuz zum Bestätigen/Abbrechen
+            btn.innerHTML = "✖";
             
-            // Timer für Reset (3 Sekunden)
             this.clickTimer[id] = setTimeout(() => {
                 btn.classList.remove('confirm-wait');
                 btn.innerHTML = "✔";
@@ -73,26 +64,21 @@ const ShoppingModule = {
     },
 
     async finishItemOptimistic(id) {
-        // UI SOFORT aktualisieren (nicht warten)
         const row = document.getElementById(`shop-row-${id}`);
         if(row) {
             row.style.transition = "all 0.5s ease";
             row.style.opacity = "0";
             row.style.transform = "translateX(50px)";
-            setTimeout(() => row.remove(), 500); // DOM entfernen
+            setTimeout(() => row.remove(), 500); 
         }
 
-        // Timer löschen
         if(this.clickTimer[id]) clearTimeout(this.clickTimer[id]);
 
-        // API Call im Hintergrund
         await API.post('update', { 
             sheet: 'Shopping', 
             id: id, 
             updates: JSON.stringify({ status: 'done' }) 
         });
-        
-        // Kein Reload nötig, User sieht Feedback sofort
     },
 
     async addItem() {
@@ -100,7 +86,6 @@ const ShoppingModule = {
         const text = input.value;
         if(!text) return;
 
-        // Feedback beim Adden (hier kein Optimistic UI da ID fehlt)
         const btn = document.querySelector('.add-box button');
         btn.innerText = "⏳";
         btn.disabled = true;
