@@ -1,9 +1,8 @@
-const App = {
+// Wir definieren App direkt global
+window.App = {
     user: null,
 
     init() {
-        window.App = this; 
-        
         const loginBtn = document.getElementById('login-btn');
         if(loginBtn) loginBtn.addEventListener('click', () => this.login());
         
@@ -51,6 +50,7 @@ const App = {
         document.getElementById('login-screen').style.display = 'none';
         const container = document.getElementById('app-container');
         
+        // Header für Gäste
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
 
@@ -91,7 +91,6 @@ const App = {
                 <div class="tile" onclick="window.App.loadModule('shopping')"><span>🛒</span><h3>Einkauf</h3></div>
                 <div class="tile" onclick="window.App.loadModule('voting')"><span>🗳️</span><h3>Votes</h3></div>
                 <div class="tile" onclick="window.App.loadModule('soda')"><span>💧</span><h3>Soda</h3></div>
-                <!-- NEU: Bahn Tile -->
                 <div class="tile" onclick="window.App.loadModule('train')"><span>🚋</span><h3>Bahn</h3></div>
                 
                 <div class="tile" onclick="window.App.loadModule('guestbook')"><span>📖</span><h3>Gästebuch</h3></div>
@@ -115,6 +114,8 @@ const App = {
         
         const container = document.getElementById('app-container');
         
+        // STANDARD Header für ALLE Module
+        // WICHTIG: window.App.showDashboard() wird direkt aufgerufen.
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
         
@@ -136,13 +137,10 @@ const App = {
         else if (moduleName === 'voting') { container.innerHTML = shell('Abstimmung', 'vote-cont'); VotingModule.init('vote-cont'); }
         else if (moduleName === 'ranking') { container.innerHTML = shell('Ranking', 'rank-cont'); TasksModule.initRanking('rank-cont'); }
         else if (moduleName === 'soda') { container.innerHTML = shell('SodaStream', 'soda-cont'); SodaModule.init('soda-cont'); }
+        else if (moduleName === 'train') { container.innerHTML = shell('Bahn', 'train-cont'); TrainModule.init('train-cont'); }
         else if (moduleName === 'guestbook') { 
             container.innerHTML = shell('Gästebuch', 'gb-cont'); 
             GuestbookModule.init('gb-cont', false); 
-        }
-        else if (moduleName === 'train') { 
-            container.innerHTML = shell('Abfahrten', 'train-cont'); 
-            TrainModule.init('train-cont'); 
         }
     },
     
@@ -157,4 +155,4 @@ const App = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => App.init());
+document.addEventListener('DOMContentLoaded', () => window.App.init());
