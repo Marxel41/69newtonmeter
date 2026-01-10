@@ -21,6 +21,9 @@ const App = {
             try { this.user = JSON.parse(savedUser); this.showDashboard(); } 
             catch (e) { localStorage.removeItem('wg_user'); }
         }
+
+        // Start Notification Loop (läuft im Hintergrund)
+        this.startNotificationService();
     },
 
     async login() {
@@ -48,12 +51,9 @@ const App = {
     },
 
     enterGuestMode() {
-        const loginScreen = document.getElementById('login-screen');
-        if(loginScreen) loginScreen.style.display = 'none';
-        
+        document.getElementById('login-screen').style.display = 'none';
         const container = document.getElementById('app-container');
         
-        // Header für Gäste
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
 
@@ -62,7 +62,7 @@ const App = {
                 <button onclick="location.reload()" style="${btnStyle}">
                     <span style="font-size: 1.4rem; margin-right: 8px;">❮</span> Zum Login
                 </button>
-                <span style="margin-left: 15px; color: #888; border-left: 1px solid #555; padding-left: 15px;">Gästebuch</span>
+                <span style="margin-left: 15px; color: #888;">Gästebuch</span>
             </div>
             <div class="module-container" style="padding-top: 10px;">
                 <div id="guest-view">Lade...</div>
@@ -77,12 +77,8 @@ const App = {
     logout() { localStorage.removeItem('wg_user'); location.reload(); },
 
     showDashboard() {
-        // Modals schließen
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        
-        // Login Screen sicher ausblenden (falls noch vorhanden)
-        const loginScreen = document.getElementById('login-screen');
-        if(loginScreen) loginScreen.style.display = 'none';
+        document.getElementById('login-screen').style.display = 'none';
         
         const sBtn = document.getElementById('settings-btn');
         if(sBtn) sBtn.style.display = 'block';
@@ -91,8 +87,6 @@ const App = {
         if (userInfo && this.user) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
         
         const c = document.getElementById('app-container');
-        
-        // Dashboard Kacheln rendern
         c.innerHTML = `
             <div class="dashboard-grid">
                 <div class="tile" onclick="window.App.loadModule('todo')"><span>📌</span><h3>To-Dos</h3></div>
@@ -121,7 +115,6 @@ const App = {
         
         const container = document.getElementById('app-container');
         
-        // Inline Styles für garantierte Sichtbarkeit des Headers
         const headerStyle = "display: flex; align-items: center; padding: 15px; background: #1f1f1f; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 20000;";
         const btnStyle = "background: none; border: none; color: #bb86fc; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; padding: 5px 10px 5px 0; pointer-events: auto;";
         
@@ -156,7 +149,99 @@ const App = {
 
     toggleNotifications() {
         const cb = document.querySelector('#settings-modal input[type="checkbox"]');
-        if(cb) localStorage.setItem('wg_notif_enabled', cb.checked);
+        if(cb) {
+            localStorage.setItem('wg_notif_enabled', cb.checked);
+            if (cb.checked && "Notification" in window) Notification.requestPermission();
+        }
+    },
+
+    // --- NOTIFICATION SERVICE ---
+    startNotificationService() {
+        // Erster Check nach 5 Sekunden, dann alle 60 Sek
+        setTimeout(() => this.checkNotifications(), 5000);
+        setInterval(() => this.checkNotifications(), 60000);
+    },
+
+    async checkNotifications() {
+        if (localStorage.getItem('wg_notif_enabled') !== 'true') return;
+        if (Notification.permission !== "granted") return;
+
+        const now = new Date();
+        const currentHour = now.getHours();
+        const todayStr = now.toISOString().split('T')[0];
+
+        try {
+            // Wir machen einen minimalen Abruf aller wichtigen Daten
+            const [rTasks, rEvents, rVotes, rGuest] = await Promise.all([
+                API.post('read', { sheet: 'Tasks', _t: Date.now() }),
+                API.post('read', { sheet: 'Events', _t: Date.now() }),
+                API.post('read', { sheet: 'Votes', _t: Date.now() }),
+                API.post('read', { sheet: 'Guestbook', _t: Date.now() })
+            ]);
+
+            // 1. TASKS (Putz/ToDo) -> Alarm um 10 Uhr
+            if (currentHour >= 10 && rTasks.status === 'success') {
+                rTasks.data.forEach(t => {
+                    // Nur offene Tasks von HEUTE
+                    if (t.status === 'open' && t.date === todayStr) {
+                        this.sendNotify(`task_${t.id}`, "Aufgabe fällig!", t.title);
+                    }
+                });
+            }
+
+            // 2. EVENTS (Kalender) -> Alarm um 9 Uhr
+            if (currentHour >= 9 && rEvents.status === 'success') {
+                rEvents.data.forEach(e => {
+                    // Wir müssen das Datum-String Problem beachten (schneiden auf YYYY-MM-DD)
+                    const eDate = e.date.substring(0, 10);
+                    if (eDate === todayStr) {
+                        this.sendNotify(`event_${e.date}_${e.title}`, "Heute im Kalender", e.title);
+                    }
+                });
+            }
+
+            // 3. VOTES (Neu) -> Immer
+            if (rVotes.status === 'success') {
+                // Wir speichern die höchste ID die wir kennen
+                const lastSeenVote = parseInt(localStorage.getItem('wg_last_vote_id') || "0");
+                let maxId = lastSeenVote;
+                
+                rVotes.data.forEach(v => {
+                    const vId = parseInt(v.id);
+                    if (vId > lastSeenVote) {
+                        this.sendNotify(`vote_${v.id}`, "Neue Abstimmung!", v.title);
+                        if (vId > maxId) maxId = vId;
+                    }
+                });
+                localStorage.setItem('wg_last_vote_id', maxId);
+            }
+
+            // 4. GUESTBOOK (Neu) -> Immer
+            if (rGuest.status === 'success') {
+                // Guestbook hat keine ID spalte, wir nutzen Zeitstempel oder Index
+                // Einfachheitshalber nutzen wir die Länge der Liste als Indikator
+                const lastCount = parseInt(localStorage.getItem('wg_gb_count') || "0");
+                const currentCount = rGuest.data.length;
+                
+                if (currentCount > lastCount) {
+                    const newEntry = rGuest.data[currentCount - 1]; // Letzter Eintrag
+                    this.sendNotify(`gb_${currentCount}`, "Neuer Gästebucheintrag", `${newEntry.name} hat geschrieben.`);
+                    localStorage.setItem('wg_gb_count', currentCount);
+                }
+            }
+
+        } catch (e) {
+            console.error("Notif Error", e);
+        }
+    },
+
+    sendNotify(key, title, body) {
+        // Prüfen ob diese spezifische Notification heute schon gesendet wurde
+        const storageKey = `notif_sent_${key}`;
+        if (localStorage.getItem(storageKey)) return;
+
+        new Notification(title, { body: body, icon: 'icon.png' }); // Icon optional
+        localStorage.setItem(storageKey, 'true');
     }
 };
 
