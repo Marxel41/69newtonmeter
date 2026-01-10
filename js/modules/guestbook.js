@@ -50,7 +50,7 @@ const GuestbookModule = {
                         </select>
 
                         <label style="display:block; margin-bottom:5px; color:#888; font-size:0.8rem;">Welches seltsame Objekt lag herum?</label>
-                        <input type="text" id="gb-objekt" placeholder="..." style="margin-bottom:15px;">
+                        <input type="text" id="gb-objekt" placeholder="z.B. Willys Dildo" style="margin-bottom:15px;">
 
                         <label style="display:block; margin-bottom:5px; color:#888; font-size:0.8rem;">Wonach roch es?</label>
                         <select id="gb-geruch" style="margin-bottom:15px;">
