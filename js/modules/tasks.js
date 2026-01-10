@@ -48,9 +48,11 @@ const TasksModule = {
         const listDiv = document.getElementById('actual-list');
         listDiv.innerHTML = "";
         
+        // Filterlogik:
+        // 'cleaning' -> Nur Putzaufgaben
+        // 'todo' -> Alles was NICHT Putzen ist (also Allgemeine & Einkaufen tasks aus dem Autosystem)
         const filtered = this.tasks.filter(t => {
             if(filterType === 'cleaning') return t.type === 'cleaning';
-            // ToDo zeigt alles außer Putzen (also auch Einkaufen und General)
             if(filterType === 'todo') return t.type !== 'cleaning'; 
             return true;
         });
@@ -64,56 +66,50 @@ const TasksModule = {
                         <strong>${task.title}</strong>
                         <small style="color:var(--text-muted)">${task.date} • ${task.points} Pkt</small>
                     </div>
-                    <!-- BUTTON LOGIK -->
                     <button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>
                 </div>`;
         });
     },
 
+    // OPTIMISTIC UI LOGIK (Jetzt garantiert für ALLE Listen aktiv)
     handleCheck(id) {
         const btn = document.getElementById(`btn-${id}`);
         if(!btn) return;
 
-        // Status prüfen
         if (btn.classList.contains('confirm-wait')) {
-            // ZWEITER KLICK -> WEG DAMIT (Sofort!)
+            // Bestätigt -> Weg damit
             this.completeTaskOptimistic(id);
         } else {
-            // ERSTER KLICK -> WARNUNG (Gelb)
+            // Erster Klick -> Warnung
             btn.classList.add('confirm-wait');
-            btn.innerHTML = "✖"; // Kreuz zum Abbrechen/Bestätigen
+            btn.innerHTML = "✖";
             
-            // Timer um Reset
             this.clickTimer[id] = setTimeout(() => {
                 btn.classList.remove('confirm-wait');
                 btn.innerHTML = "✔";
-            }, 3000); // 3 Sekunden Zeit
+                delete TasksModule.clickTimer[id];
+            }, 3000);
         }
     },
 
     async completeTaskOptimistic(id) {
-        // UI SOFORT aktualisieren (nicht warten)
         const row = document.getElementById(`row-${id}`);
         if(row) {
-            row.style.transition = "all 0.5s";
+            // Animation
+            row.style.transition = "all 0.5s ease";
             row.style.opacity = "0";
             row.style.transform = "translateX(50px)";
-            setTimeout(() => row.remove(), 500); // Ganz entfernen nach Animation
+            setTimeout(() => row.remove(), 500);
         }
 
-        // Timer löschen falls vorhanden
         if(this.clickTimer[id]) clearTimeout(this.clickTimer[id]);
 
-        // API Call im Hintergrund
         await API.post('update', { 
             sheet: 'Tasks', 
             id: id, 
             updates: JSON.stringify({ status: 'done' }), 
             user: App.user.name 
         });
-        
-        // Kein Reload nötig, User sieht es ist weg.
-        // Reload würde nur stören.
     },
 
     async addTask(type) {
@@ -145,7 +141,7 @@ const TasksModule = {
         
         if (result.status === 'success') {
             listDiv.innerHTML = "";
-            window._rankingLogs = result.log; // Logs speichern
+            window._rankingLogs = result.log; 
             
             result.data.forEach((entry, idx) => {
                 let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : ''));
@@ -174,7 +170,6 @@ const TasksModule = {
             userLogs.reverse().forEach(log => {
                 const d = new Date(log.date);
                 const dateStr = !isNaN(d) ? `${d.getDate()}.${d.getMonth()+1}.` : '';
-                // HIER: Sicherstellen dass wir Titel anzeigen
                 list.innerHTML += `
                     <div style="padding:10px 0; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
                         <span><small style="color:var(--text-muted)">${dateStr}</small> ${log.reason}</span>
