@@ -29,7 +29,7 @@ const TrainModule = {
             <div style="padding: 10px;">
                 <h3 style="color:var(--text-main); margin-bottom:10px; text-align:center;">Bahn Einrichtung</h3>
                 <p style="color:var(--text-muted); font-size:0.9rem; text-align:center; margin-bottom:20px;">
-                    Suche deine Haltestellen und weise sie zu.
+                    Suche deine Haltestellen (z.B. "Werderstraße").
                 </p>
 
                 <!-- STATUS ANZEIGE -->
@@ -43,14 +43,14 @@ const TrainModule = {
                         <strong style="color:${this.stops.dhbw ? 'var(--secondary)' : 'var(--danger)'}">${this.names.dhbw}</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between;">
-                        <span>🏛️ HKA:</span> 
+                        <span>🏛️ HKAA:</span> 
                         <strong style="color:${this.stops.hka ? 'var(--secondary)' : 'var(--danger)'}">${this.names.hka}</strong>
                     </div>
                 </div>
 
                 <!-- SUCHE -->
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <input type="text" id="setup-search" placeholder="z.B. Karlsruhe Werder" style="margin:0;">
+                    <input type="text" id="setup-search" placeholder="Station eingeben..." style="margin:0;">
                     <button class="primary" onclick="TrainModule.searchAPI()" style="width:auto; margin:0;">🔍</button>
                 </div>
                 
@@ -72,8 +72,9 @@ const TrainModule = {
         resDiv.innerHTML = "<p style='text-align:center; color:#888;'>Suche...</p>";
 
         try {
-            // Wir suchen sehr breit (results=10) um sicherzugehen
-            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=10&poi=false&addresses=false`;
+            // FIX: Wir entfernen alle Filter wie poi=false um maximale Ergebnisse zu bekommen
+            // und erhöhen das Limit auf 20.
+            const url = `https://v6.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=20`;
             const res = await fetch(url);
             const data = await res.json();
 
@@ -84,14 +85,18 @@ const TrainModule = {
             }
 
             data.forEach(stop => {
+                // Wir zeigen alles an was technisch eine Station ist
                 if(stop.type === 'stop' || stop.type === 'station') {
                     resDiv.innerHTML += `
                         <div style="background:#333; padding:10px; border-radius:8px; margin-bottom:10px;">
-                            <div style="font-weight:bold; color:white;">${stop.name}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-weight:bold; color:white;">${stop.name}</div>
+                                <div style="font-size:0.7rem; color:#888;">ID: ${stop.id}</div>
+                            </div>
                             <div style="display:flex; gap:5px; margin-top:8px;">
-                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'origin')" style="flex:1; padding:5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als Start</button>
-                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'dhbw')" style="flex:1; padding:5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als DHBW</button>
-                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'hka')" style="flex:1; padding:5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als HKA</button>
+                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'origin')" style="flex:1; padding:8px 5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als Start</button>
+                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'dhbw')" style="flex:1; padding:8px 5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als DHBW</button>
+                                <button onclick="TrainModule.assign('${stop.id}', '${stop.name}', 'hka')" style="flex:1; padding:8px 5px; font-size:0.7rem; cursor:pointer; background:#444; color:white; border:1px solid #555; border-radius:4px;">Als HKA</button>
                             </div>
                         </div>
                     `;
