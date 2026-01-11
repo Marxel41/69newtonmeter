@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
-    <!-- CACHE BUSTER V16 -->
-    <link rel="stylesheet" href="style.css?v=16">
+    <!-- CSS Cache Buster -->
+    <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -45,7 +45,7 @@
 
     <!-- Modals -->
 
-    <!-- 1. SETTINGS MODAL -->
+    <!-- 1. SETTINGS -->
     <div id="settings-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('settings-modal').style.display='none'">&times;</button>
@@ -58,7 +58,7 @@
         </div>
     </div>
 
-    <!-- 2. EDIT MODAL (DAS HAT GEFEHLT ODER WAR FALSCH) -->
+    <!-- 2. EDIT MODAL (Zwingend erforderlich!) -->
     <div id="edit-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('edit-modal').style.display='none'">&times;</button>
@@ -99,7 +99,7 @@
         </div>
     </div>
 
-    <!-- 4. DAY DETAILS MODAL -->
+    <!-- 4. DAY DETAILS -->
     <div id="day-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('day-modal').style.display='none'">&times;</button>
@@ -108,7 +108,7 @@
         </div>
     </div>
 
-    <!-- 5. RANKING MODAL -->
+    <!-- 5. RANKING -->
     <div id="ranking-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('ranking-modal').style.display='none'">&times;</button>
@@ -117,19 +117,19 @@
         </div>
     </div>
 
-    <!-- 6. FINANCE MODAL -->
+    <!-- 6. FINANCE -->
     <div id="finance-modal" class="modal" style="display:none;"></div>
 
-    <!-- SCRIPTS -->
-    <script src="js/api.js"></script>
-    <script src="js/modules/calendar.js"></script>
-    <script src="js/modules/shopping.js"></script>
-    <script src="js/modules/tasks.js"></script>
-    <script src="js/modules/voting.js"></script>
-    <script src="js/modules/sodastream.js"></script>
-    <script src="js/modules/guestbook.js"></script>
-    <script src="js/modules/train.js"></script>
-    <script src="js/modules/finance.js"></script>
-    <script src="js/main.js"></script>
+    <!-- SKRIPTE MIT CACHE BUSTER ?v=20 -->
+    <script src="js/api.js?v=20"></script>
+    <script src="js/modules/calendar.js?v=20"></script>
+    <script src="js/modules/shopping.js?v=20"></script>
+    <script src="js/modules/tasks.js?v=20"></script>
+    <script src="js/modules/voting.js?v=20"></script>
+    <script src="js/modules/sodastream.js?v=20"></script>
+    <script src="js/modules/guestbook.js?v=20"></script>
+    <script src="js/modules/train.js?v=20"></script>
+    <script src="js/modules/finance.js?v=20"></script>
+    <script src="js/main.js?v=20"></script>
 </body>
 </html>
