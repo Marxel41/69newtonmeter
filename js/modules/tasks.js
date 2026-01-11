@@ -24,12 +24,46 @@ const TasksModule = {
                         <option value="5days">Alle 5 Tage</option>
                         <option value="weekly">Wöchentlich</option>
                     </select>
-                    <button class="primary" onclick="window.TasksModule.addTask('${type}')">+</button>
+                    <button class="primary" id="btn-add-task">+</button>
                 </div>
             `;
         }
         
         container.innerHTML = `${addHtml}<div id="actual-list">Lade...</div>`;
+        
+        // --- EVENT LISTENER (Der sichere Weg) ---
+        // 1. Hinzufügen
+        const addBtn = document.getElementById('btn-add-task');
+        if(addBtn) addBtn.addEventListener('click', () => this.addTask(type));
+
+        // 2. Klicks auf die Liste (Delegation)
+        const listDiv = document.getElementById('actual-list');
+        listDiv.addEventListener('click', (e) => {
+            // A. Klick auf Text -> Editieren
+            const textTarget = e.target.closest('.task-clickable-text');
+            if (textTarget) {
+                const id = textTarget.dataset.id;
+                this.openEdit(id);
+                return;
+            }
+
+            // B. Klick auf Check-Button
+            const checkBtn = e.target.closest('.check-btn');
+            if (checkBtn) {
+                // ID aus Button-ID extrahieren (btn-12345)
+                const id = checkBtn.id.replace('btn-', '');
+                this.handleCheck(id);
+                return;
+            }
+
+            // C. Klick auf Reservieren (Hand)
+            const handBtn = e.target.closest('.assign-btn');
+            if (handBtn) {
+                const id = handBtn.dataset.id;
+                this.assignTask(id);
+            }
+        });
+
         if (type === 'ranking') await this.loadRanking();
         else await this.loadTasks(type);
     },
@@ -37,8 +71,6 @@ const TasksModule = {
     async initRanking(cId) { return this.init('ranking', cId); },
 
     async loadTasks(filterType) {
-        const listDiv = document.getElementById('actual-list');
-        if(!listDiv) return;
         const result = await API.post('read', { sheet: 'Tasks', _t: Date.now() });
         
         if (result.status === 'success') {
@@ -85,8 +117,8 @@ const TasksModule = {
                 // FREI
                 actionHtml = `
                     <div style="display:flex; gap:10px;">
-                        <button class="check-btn" onclick="window.TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted); font-size:1rem;">✋</button>
-                        <button id="btn-${task.id}" class="check-btn" onclick="window.TasksModule.handleCheck('${task.id}')">✔</button>
+                        <button class="check-btn assign-btn" data-id="${task.id}" style="border-color:var(--text-muted); color:var(--text-muted); font-size:1rem;">✋</button>
+                        <button id="btn-${task.id}" class="check-btn">✔</button>
                     </div>`;
             } 
             else if (isMyTask) {
@@ -94,7 +126,7 @@ const TasksModule = {
                 rowClass = "task-assigned-me";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--secondary); font-size:0.8rem; display:block;">⏳ ${minsLeft} Min. reserviert</span>`;
-                actionHtml = `<button id="btn-${task.id}" class="check-btn" onclick="window.TasksModule.handleCheck('${task.id}')">✔</button>`;
+                actionHtml = `<button id="btn-${task.id}" class="check-btn">✔</button>`;
             } 
             else {
                 // GESPERRT
@@ -104,10 +136,9 @@ const TasksModule = {
                 actionHtml = `<span style="font-size:1.5rem; opacity:0.5;">🔒</span>`;
             }
 
-            // WICHTIG: onclick auf dem Text-Div
             listDiv.innerHTML += `
                 <div class="list-item ${rowClass}" id="row-${task.id}">
-                    <div class="task-info" style="flex:1; cursor:pointer;" onclick="window.TasksModule.openEdit('${task.id}')">
+                    <div class="task-info task-clickable-text" data-id="${task.id}" style="flex:1; cursor:pointer;">
                         <strong>${task.title}</strong>
                         ${pointsDisplay}
                         ${infoText}
@@ -117,43 +148,62 @@ const TasksModule = {
         });
     },
 
+    // --- NEU: DYNAMISCHES EDIT MODAL ---
+    // Erzeugt das Modal im JS, damit es garantiert existiert
     openEdit(id) {
-        console.log("Edit clicked:", id); // Zur Kontrolle in der Konsole
-        
-        const task = this.tasks.find(t => t.id === id);
-        if(!task) {
-            console.error("Task ID nicht gefunden:", id);
-            return;
+        // Wir nutzen == für ID Vergleich (String vs Number tolerant)
+        const task = this.tasks.find(t => t.id == id);
+        if(!task) { alert("Task nicht gefunden: " + id); return; }
+
+        // Modal bauen (falls nicht vorhanden) oder nutzen
+        let modal = document.getElementById('js-edit-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'js-edit-modal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <button class="close-modal-x">&times;</button>
+                    <h3>Bearbeiten</h3>
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Titel</label>
+                        <input type="text" id="js-edit-title" style="width:100%;">
+                    </div>
+                    <div id="js-edit-points-wrap" style="margin-bottom:15px;">
+                        <label style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Punkte</label>
+                        <input type="number" id="js-edit-points" style="width:100%;">
+                    </div>
+                    <button id="js-edit-save" class="primary">Speichern</button>
+                </div>`;
+            document.body.appendChild(modal);
+            
+            // Close Handler
+            modal.querySelector('.close-modal-x').onclick = () => modal.style.display = 'none';
         }
 
-        const modal = document.getElementById('edit-modal');
-        if(modal) {
-            modal.style.display = 'flex';
-            document.getElementById('edit-title').value = task.title;
-            document.getElementById('edit-points').value = task.points;
-            
-            const pWrapper = document.getElementById('edit-points-wrapper');
-            if(pWrapper) pWrapper.style.display = 'block'; 
-            
-            // Alten Listener entfernen durch Klonen
-            const oldBtn = document.getElementById('edit-save-btn');
-            const newBtn = oldBtn.cloneNode(true);
-            oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-            
-            newBtn.onclick = () => this.saveEdit(id);
-        } else {
-            alert("FEHLER: Das 'edit-modal' Element fehlt in deiner index.html!");
-        }
+        // Werte setzen
+        document.getElementById('js-edit-title').value = task.title;
+        document.getElementById('js-edit-points').value = task.points;
+        document.getElementById('js-edit-points-wrap').style.display = 'block';
+
+        // Save Handler neu setzen (um alte Closures zu vermeiden)
+        const saveBtn = document.getElementById('js-edit-save');
+        // Klonen um alte Listener zu löschen
+        const newBtn = saveBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+        
+        newBtn.addEventListener('click', () => this.saveEdit(id));
+
+        modal.style.display = 'flex';
     },
 
     async saveEdit(id) {
-        const newTitle = document.getElementById('edit-title').value;
-        const newPoints = document.getElementById('edit-points').value;
+        const newTitle = document.getElementById('js-edit-title').value;
+        const newPoints = document.getElementById('js-edit-points').value;
+        
+        document.getElementById('js-edit-modal').style.display = 'none';
 
-        if(!newTitle) return;
-
-        document.getElementById('edit-modal').style.display = 'none';
-
+        // Optimistic UI
         const row = document.getElementById(`row-${id}`);
         if(row) {
             const titleEl = row.querySelector('strong');
