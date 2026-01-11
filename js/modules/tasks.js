@@ -1,8 +1,10 @@
 const TasksModule = {
     tasks: [],
     clickTimer: {},
+    currentType: 'general', // Speichert ob wir in cleaning oder todo sind
 
     async init(type, containerId) {
+        this.currentType = type;
         const container = document.getElementById(containerId);
         const isAdmin = App.user.role === 'Admin' || App.user.role === 'admin';
         
@@ -45,17 +47,10 @@ const TasksModule = {
 
             this.tasks = result.data.filter(t => {
                 if (t.status !== 'open') return false;
-
-                // --- ZEIT FILTER (erst ab 10 Uhr) ---
-                if (t.date > todayStr) return false; // Zukunft ausblenden
-                if (t.date === todayStr) {
-                    // Wenn heute: Erst ab 10 Uhr anzeigen!
-                    if (currentHour < 10) return false;
-                }
-                // Überfällige (date < todayStr) immer anzeigen
+                if (t.date > todayStr) return false; 
+                if (t.date === todayStr && currentHour < 10) return false;
                 return true;
             });
-            
             this.render(filterType);
         }
     },
@@ -88,7 +83,8 @@ const TasksModule = {
 
             if (!isLocked) {
                 actionHtml = `
-                    <div style="display:flex; gap:10px;">
+                    <div style="display:flex; gap:5px;">
+                        <button class="icon-btn-small" onclick="TasksModule.openEdit('${task.id}')">✏️</button>
                         <button class="check-btn" onclick="TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted); font-size:1rem;">✋</button>
                         <button id="btn-${task.id}" class="check-btn" onclick="TasksModule.handleCheck('${task.id}')">✔</button>
                     </div>`;
@@ -108,7 +104,7 @@ const TasksModule = {
 
             listDiv.innerHTML += `
                 <div class="list-item ${rowClass}" id="row-${task.id}">
-                    <div class="task-info">
+                    <div class="task-info" style="flex:1;">
                         <strong>${task.title}</strong>
                         ${pointsDisplay}
                         ${infoText}
@@ -118,29 +114,55 @@ const TasksModule = {
         });
     },
 
-    async assignTask(id) {
-        const row = document.getElementById(`row-${id}`);
-        if(row) row.style.opacity = '0.5';
+    // --- EDIT LOGIK ---
+    openEdit(id) {
+        const task = this.tasks.find(t => t.id === id);
+        if(!task) return;
 
-        const timestamp = new Date().toISOString();
+        document.getElementById('edit-modal').style.display = 'flex';
+        document.getElementById('edit-title').value = task.title;
+        document.getElementById('edit-points').value = task.points;
+        document.getElementById('edit-points-wrapper').style.display = 'block'; // Punkte anzeigen
         
+        // Speichern Button konfigurieren
+        const saveBtn = document.getElementById('edit-save-btn');
+        saveBtn.onclick = () => this.saveEdit(id);
+    },
+
+    async saveEdit(id) {
+        const newTitle = document.getElementById('edit-title').value;
+        const newPoints = document.getElementById('edit-points').value;
+
+        if(!newTitle) return;
+
+        document.getElementById('edit-modal').style.display = 'none';
+
+        // Optimistic Update (Titel in Liste sofort ändern)
+        const row = document.getElementById(`row-${id}`);
+        if(row) {
+            const titleEl = row.querySelector('strong');
+            if(titleEl) titleEl.innerText = newTitle;
+        }
+
         await API.post('update', { 
             sheet: 'Tasks', 
             id: id, 
-            updates: JSON.stringify({ 
-                assignee: App.user.name,
-                assigned_at: timestamp
-            }) 
+            updates: JSON.stringify({ title: newTitle, points: newPoints }) 
         });
         
-        const isCleaning = document.querySelector('h2') && document.querySelector('h2').innerText.includes('Putzplan');
-        await this.loadTasks(isCleaning ? 'cleaning' : 'todo');
+        await this.loadTasks(this.currentType);
+    },
+
+    async assignTask(id) {
+        const row = document.getElementById(`row-${id}`);
+        if(row) row.style.opacity = '0.5';
+        await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ assignee: App.user.name, assigned_at: new Date().toISOString() }) });
+        await this.loadTasks(this.currentType);
     },
 
     handleCheck(id) {
         const btn = document.getElementById(`btn-${id}`);
         if(!btn) return;
-
         if (btn.classList.contains('confirm-wait')) {
             this.completeTaskOptimistic(id);
         } else {
@@ -156,20 +178,9 @@ const TasksModule = {
 
     async completeTaskOptimistic(id) {
         const row = document.getElementById(`row-${id}`);
-        if(row) {
-            row.style.transition = "all 0.5s ease";
-            row.style.opacity = "0";
-            row.style.transform = "translateX(50px)";
-            setTimeout(() => row.remove(), 500);
-        }
+        if(row) { row.style.transition = "all 0.5s ease"; row.style.opacity = "0"; row.style.transform = "translateX(50px)"; setTimeout(() => row.remove(), 500); }
         if(this.clickTimer[id]) clearTimeout(this.clickTimer[id]);
-
-        await API.post('update', { 
-            sheet: 'Tasks', 
-            id: id, 
-            updates: JSON.stringify({ status: 'done' }), 
-            user: App.user.name 
-        });
+        await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
     },
 
     async addTask(type) {
@@ -180,14 +191,11 @@ const TasksModule = {
         const points = ptsInput ? ptsInput.value : (type==='cleaning'?20:10);
 
         if(!title) return;
-        
         const btn = document.querySelector('.add-box button');
         btn.innerText = "⏳";
 
         const finalType = type === 'cleaning' ? 'cleaning' : 'general';
-        await API.post('create', { sheet: 'Tasks', payload: JSON.stringify({
-            title, date, type: finalType, points, status: "open", recurrence: recur
-        })});
+        await API.post('create', { sheet: 'Tasks', payload: JSON.stringify({ title, date, type: finalType, points, status: "open", recurrence: recur })});
         
         document.getElementById('t-title').value = "";
         btn.innerText = "+";
@@ -198,21 +206,12 @@ const TasksModule = {
         const listDiv = document.getElementById('actual-list');
         listDiv.innerHTML = "Lade Ranking...";
         const result = await API.post('get_ranking', { _t: Date.now() });
-        
         if (result.status === 'success') {
             listDiv.innerHTML = "";
             window._rankingLogs = result.log; 
-            
             result.data.forEach((entry, idx) => {
                 let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : ''));
-                listDiv.innerHTML += `
-                    <div class="list-item" onclick="TasksModule.showDetails('${entry.name}')" style="cursor:pointer;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span style="font-size:1.2rem;">${medal}</span>
-                            <strong>${entry.name}</strong>
-                        </div>
-                        <span class="points-badge">${entry.points} Pkt</span>
-                    </div>`;
+                listDiv.innerHTML += `<div class="list-item" onclick="TasksModule.showDetails('${entry.name}')" style="cursor:pointer;"><div style="display:flex; align-items:center; gap:10px;"><span style="font-size:1.2rem;">${medal}</span><strong>${entry.name}</strong></div><span class="points-badge">${entry.points} Pkt</span></div>`;
             });
         }
     },
@@ -223,18 +222,13 @@ const TasksModule = {
         const modal = document.getElementById('ranking-modal');
         const list = document.getElementById('ranking-modal-list');
         document.getElementById('ranking-modal-user').innerText = `Historie: ${name}`;
-        
         list.innerHTML = "";
         if(userLogs.length === 0) list.innerHTML = "<p>Keine Einträge.</p>";
         else {
             userLogs.reverse().forEach(log => {
                 const d = new Date(log.date);
                 const dateStr = !isNaN(d) ? `${d.getDate()}.${d.getMonth()+1}.` : '';
-                list.innerHTML += `
-                    <div style="padding:10px 0; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-                        <span><small style="color:var(--text-muted)">${dateStr}</small> ${log.reason}</span>
-                        <span style="color:var(--secondary);">+${log.points}</span>
-                    </div>`;
+                list.innerHTML += `<div style="padding:10px 0; border-bottom:1px solid #333; display:flex; justify-content:space-between;"><span><small style="color:var(--text-muted)">${dateStr}</small> ${log.reason}</span><span style="color:var(--secondary);">+${log.points}</span></div>`;
             });
         }
         modal.style.display = 'flex';
