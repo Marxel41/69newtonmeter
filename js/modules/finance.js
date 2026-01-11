@@ -6,12 +6,11 @@ const FinanceModule = {
     // ==========================================
     // 🔧 HARDCODED FIXKOSTEN (HIER ÄNDERN!)
     // ==========================================
-    // Trage hier die monatlichen Gesamtkosten der WG ein:
     fixedCosts: {
-        rent: 1300,       // Miete (Gesamt)
-        utilities: 200,   // Nebenkosten
-        internet: 25,     // Internet
-        power: 19         // Strom
+        rent: 1200,       // Miete (Gesamt)
+        utilities: 300,  // Nebenkosten
+        internet: 19,   // Internet
+        power: 82       // Strom
     },
     // ==========================================
 
@@ -21,13 +20,10 @@ const FinanceModule = {
         const container = document.getElementById(cId);
         this.cId = cId;
         
-        // Check: Gibt es lokale Änderungen? Wenn ja, überschreiben sie den Hardcode.
-        // Wenn du willst, dass der Hardcode IMMER gewinnt, lösche diesen Block:
+        // Check: Gibt es lokale Änderungen?
         const savedFixed = localStorage.getItem('wg_finance_fixed');
         if(savedFixed) {
-            // Optionale Zeile: Entferne "//" am Anfang der nächsten Zeile, um Hardcode zu erzwingen und Speicher zu ignorieren
-            // localStorage.removeItem('wg_finance_fixed'); 
-            this.fixedCosts = JSON.parse(savedFixed);
+            try { this.fixedCosts = JSON.parse(savedFixed); } catch(e){}
         }
 
         this.renderShell();
@@ -90,7 +86,7 @@ const FinanceModule = {
                 </div>
             </div>
 
-            <h3 style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;">Verlauf</h3>
+            <h3 style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;">Verlauf (Klicken zum Bearbeiten)</h3>
             <div id="finance-list"></div>
         `;
         
@@ -154,9 +150,7 @@ const FinanceModule = {
 
     toggleMonthDetails(id) {
         const el = document.getElementById(`details-${id}`);
-        if (el) {
-            el.style.display = el.style.display === 'none' ? 'block' : 'none';
-        }
+        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
     },
 
     generatePieChartHTML(variableCosts) {
@@ -203,17 +197,12 @@ const FinanceModule = {
         `;
     },
 
-    // Einstellungen Dialog (falls man doch mal ändern will)
     showFixedCostSettings() {
         const modal = document.getElementById('finance-modal');
         modal.innerHTML = `
             <div class="modal-content">
                 <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
                 <h3>Fixkosten (Lokal)</h3>
-                <p style="color:#888; font-size:0.8rem; margin-bottom:15px;">
-                    Änderungen werden nur auf diesem Gerät gespeichert.<br>
-                    Um sie für alle zu ändern, muss der Code angepasst werden.
-                </p>
                 
                 <label style="font-size:0.8rem;">Miete</label>
                 <input type="number" id="fc-rent" value="${this.fixedCosts.rent}">
@@ -224,7 +213,7 @@ const FinanceModule = {
                 <label style="font-size:0.8rem;">Strom</label>
                 <input type="number" id="fc-pow" value="${this.fixedCosts.power}">
                 
-                <button class="primary" onclick="FinanceModule.saveFixedCosts()">Lokal Speichern</button>
+                <button class="primary" onclick="FinanceModule.saveFixedCosts()">Speichern</button>
             </div>`;
         modal.style.display = 'flex';
     },
@@ -318,8 +307,9 @@ const FinanceModule = {
 
             let details = isExpense ? `bezahlt von <strong>${t.payer}</strong>` : `<strong>${t.payer}</strong> ➔ <strong>${t.recipient}</strong>`;
 
+            // FIX: Jetzt klickbar für Bearbeiten!
             list.innerHTML += `
-                <div class="list-item">
+                <div class="list-item" onclick="window.FinanceModule.openEdit('${t.id}')" style="cursor:pointer;">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="font-size:1.5rem;">${icon}</span>
                         <div style="display:flex; flex-direction:column;">
@@ -333,6 +323,85 @@ const FinanceModule = {
                 </div>
             `;
         });
+    },
+
+    // --- NEUE EDIT LOGIK ---
+    openEdit(id) {
+        const t = this.transactions.find(trans => trans.id === id);
+        if(!t) return;
+
+        // Wir nutzen das globale Edit-Modal, passen es aber an
+        let modal = document.getElementById('js-edit-modal');
+        if (!modal) {
+            // Falls es noch nicht existiert (z.B. noch nie Task bearbeitet), bauen wir es schnell
+            modal = document.createElement('div');
+            modal.id = 'js-edit-modal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <button class="close-modal-x">&times;</button>
+                    <h3>Bearbeiten</h3>
+                    <div style="margin-bottom:15px;">
+                        <label id="lbl-edit-title" style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Titel</label>
+                        <input type="text" id="js-edit-title" style="width:100%;">
+                    </div>
+                    <div id="js-edit-points-wrap" style="margin-bottom:15px;">
+                        <label id="lbl-edit-points" style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Punkte</label>
+                        <input type="number" id="js-edit-points" style="width:100%;" step="0.01">
+                    </div>
+                    <button id="js-edit-save" class="primary">Speichern</button>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.close-modal-x').onclick = () => modal.style.display = 'none';
+        }
+
+        // Labels anpassen für Finanzen
+        const lblTitle = document.getElementById('lbl-edit-title');
+        const lblPoints = document.getElementById('lbl-edit-points');
+        if(lblTitle) lblTitle.innerText = "Beschreibung";
+        if(lblPoints) lblPoints.innerText = "Betrag (€)";
+
+        // Werte setzen
+        document.getElementById('js-edit-title').value = t.description;
+        document.getElementById('js-edit-points').value = t.amount;
+        document.getElementById('js-edit-points-wrap').style.display = 'block';
+
+        const saveBtn = document.getElementById('js-edit-save');
+        // Alten Listener entfernen durch Klonen
+        const newBtn = saveBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+        
+        newBtn.addEventListener('click', () => this.saveEdit(id));
+
+        modal.style.display = 'flex';
+    },
+
+    async saveEdit(id) {
+        const newDesc = document.getElementById('js-edit-title').value;
+        const newAmount = document.getElementById('js-edit-points').value;
+
+        if(!newDesc || !newAmount) return;
+
+        document.getElementById('js-edit-modal').style.display = 'none';
+
+        // Optimistic UI (Lokal updaten für sofortiges Feedback)
+        const t = this.transactions.find(trans => trans.id === id);
+        if(t) {
+            t.description = newDesc;
+            t.amount = newAmount;
+            // Neu berechnen
+            this.calculateDebts();
+            if (this.currentView === 'split') this.renderHistory();
+            else this.renderStatsView();
+        }
+
+        await API.post('update', { 
+            sheet: 'Finance', 
+            id: id, 
+            updates: JSON.stringify({ description: newDesc, amount: newAmount }) 
+        });
+        
+        await this.load(); // Sicherer Reload am Ende
     },
 
     showAddExpense() {
@@ -353,7 +422,7 @@ const FinanceModule = {
         modal.innerHTML = `<div class="modal-content" style="text-align:center;"><h3>Lade...</h3><div style="margin:20px;">⏳</div></div>`;
         modal.style.display = 'flex';
 
-        await this.load(); // Refresh Data
+        await this.load();
 
         const myName = App.user.name;
         const myBalance = this.balances[myName] || 0;
@@ -424,3 +493,5 @@ const FinanceModule = {
         await this.load();
     }
 };
+
+window.FinanceModule = FinanceModule;
