@@ -7,7 +7,7 @@ const ShoppingModule = {
         container.innerHTML = `
             <div class="add-box" style="background:var(--card-bg); padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px;">
                 <input type="text" id="shop-input" placeholder="Was fehlt?" style="margin:0;">
-                <button class="primary" onclick="ShoppingModule.addItem()" style="width:auto; margin:0;">+</button>
+                <button class="primary" onclick="window.ShoppingModule.addItem()" style="width:auto; margin:0;">+</button>
             </div>
             <div id="shopping-list">Lade...</div>
         `;
@@ -39,7 +39,7 @@ const ShoppingModule = {
                     <div style="display:flex; flex-direction:column; flex:1;">
                         <span style="font-weight:500;">${item.item}</span>
                     </div>
-                    <div style="display:flex; gap:5px;">
+                    <div style="display:flex; gap:5px; align-items:center;">
                         <button class="icon-btn-small" onclick="window.ShoppingModule.openEdit('${item.id}')">✏️</button>
                         <button id="shop-btn-${item.id}" class="check-btn" onclick="window.ShoppingModule.handleCheck('${item.id}')">✔</button>
                     </div>
@@ -47,18 +47,27 @@ const ShoppingModule = {
         });
     },
 
+    // --- EDIT LOGIK ---
     openEdit(id) {
         const item = this.items.find(i => i.id === id);
         if(!item) return;
 
         const modal = document.getElementById('edit-modal');
-        modal.style.display = 'flex';
-        document.getElementById('edit-title').value = item.item;
-        const pWrap = document.getElementById('edit-points-wrapper');
-        if(pWrap) pWrap.style.display = 'none'; // Keine Punkte
-        
-        const saveBtn = document.getElementById('edit-save-btn');
-        saveBtn.onclick = () => this.saveEdit(id);
+        if(modal) {
+            modal.style.display = 'flex';
+            document.getElementById('edit-title').value = item.item;
+            
+            // Punkte-Feld ausblenden (gibt es beim Einkauf nicht)
+            const pWrapper = document.getElementById('edit-points-wrapper');
+            if(pWrapper) pWrapper.style.display = 'none';
+            
+            // Clean Click Listener
+            const oldBtn = document.getElementById('edit-save-btn');
+            const newBtn = oldBtn.cloneNode(true);
+            oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+            
+            newBtn.onclick = () => this.saveEdit(id);
+        }
     },
 
     async saveEdit(id) {
@@ -67,9 +76,12 @@ const ShoppingModule = {
 
         document.getElementById('edit-modal').style.display = 'none';
 
-        // Optimistic
+        // Optimistic UI
         const row = document.getElementById(`shop-row-${id}`);
-        if(row) row.querySelector('span').innerText = newTitle;
+        if(row) {
+            const titleEl = row.querySelector('span');
+            if(titleEl) titleEl.innerText = newTitle;
+        }
 
         await API.post('update', { 
             sheet: 'Shopping', 
@@ -80,10 +92,49 @@ const ShoppingModule = {
         await this.load();
     },
 
-    // ... (Restliche Funktionen: handleCheck, finishItemOptimistic, addItem wie gehabt) ...
-    handleCheck(id) { /* ... */ },
-    async finishItemOptimistic(id) { /* ... */ },
-    async addItem() { /* ... */ }
+    // --- CHECK LOGIK ---
+    handleCheck(id) {
+        const btn = document.getElementById(`shop-btn-${id}`);
+        if(!btn) return;
+
+        if (btn.classList.contains('confirm-wait')) {
+            this.finishItemOptimistic(id);
+        } else {
+            btn.classList.add('confirm-wait');
+            btn.innerHTML = "✖";
+            this.clickTimer[id] = setTimeout(() => {
+                btn.classList.remove('confirm-wait');
+                btn.innerHTML = "✔";
+                delete ShoppingModule.clickTimer[id];
+            }, 3000);
+        }
+    },
+
+    async finishItemOptimistic(id) {
+        const row = document.getElementById(`shop-row-${id}`);
+        if(row) { 
+            row.style.transition = "all 0.5s ease"; 
+            row.style.opacity = "0"; 
+            row.style.transform = "translateX(50px)"; 
+            setTimeout(() => row.remove(), 500); 
+        }
+        if(this.clickTimer[id]) clearTimeout(this.clickTimer[id]);
+        await API.post('update', { sheet: 'Shopping', id: id, updates: JSON.stringify({ status: 'done' }) });
+    },
+
+    async addItem() {
+        const input = document.getElementById('shop-input');
+        const text = input.value;
+        if(!text) return;
+        const btn = document.querySelector('.add-box button');
+        btn.innerText = "⏳";
+        btn.disabled = true;
+        await API.post('create', { sheet: 'Shopping', payload: JSON.stringify({item: text, status: 'open', added_by: App.user.name}) });
+        input.value = "";
+        btn.innerText = "+";
+        btn.disabled = false;
+        await this.load();
+    }
 };
 
 // GLOBAL MACHEN!
