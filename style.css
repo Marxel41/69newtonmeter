@@ -1,6 +1,8 @@
-/* VERSION: 11.0 - TILE EDIT */
+/* VERSION: 15.0 - COMPLETE (Login, Guestbook, Edit, Sorting) */
 
-/* ... (Vorherige Styles bleiben gleich) ... */
+/* =========================================
+   1. CORE APP STYLES
+   ========================================= */
 :root {
     --bg-color: #121212;
     --card-bg: #1e1e1e;
@@ -9,7 +11,7 @@
     --text-main: #e0e0e0;
     --text-muted: #a0a0a0;
     --danger: #cf6679;
-    --warn: #ffca28;
+    --warn: #ffca28; /* Gelb für Wartestatus (Tasks) */
     --veto: #ff9800;
 }
 
@@ -34,10 +36,22 @@ header {
     align-items: center;
     height: 60px;
 }
-.header-actions { display: flex; align-items: center; gap: 15px; }
-#user-info { font-size: 0.9rem; color: var(--text-muted); }
+
+/* Header Actions (Name + Settings nebeneinander) */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#user-info {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 5px; }
 
+/* LOGIN SCREEN (Fix: Hoher z-index damit klickbar) */
 #login-screen {
     display: flex;
     flex-direction: column;
@@ -50,9 +64,16 @@ header {
     min-height: 100vh;
     pointer-events: auto !important; 
 }
-#login-btn, #guest-btn { pointer-events: auto !important; cursor: pointer !important; position: relative; z-index: 5001; }
 
-/* Dashboard */
+/* Login Buttons */
+#login-btn, #guest-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative;
+    z-index: 5001; 
+}
+
+/* Dashboard Grid */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -79,7 +100,7 @@ header {
 .tile h3 { margin: 0; font-size: 0.9rem; font-weight: 500; }
 .tile.wide { grid-column: span 2; aspect-ratio: auto; flex-direction: row; justify-content: space-between; padding: 20px; }
 
-/* --- EDIT MODE STYLES (NEU) --- */
+/* Dashboard Edit Mode (Sortieren) */
 .tile.tile-edit {
     border-color: #444;
     border-style: dashed;
@@ -97,11 +118,7 @@ header {
     100% { transform: scale(1); }
 }
 
-/* Modul Container */
-.module-container { padding: 15px; animation: fadeIn 0.3s; }
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-
-/* Voting */
+/* Voting Styles */
 .vote-card { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #555; }
 .vote-card.status-yes { border-left-color: var(--secondary); border: 1px solid var(--secondary); }
 .vote-card.status-no { border-left-color: var(--danger); border: 1px solid var(--danger); }
@@ -115,7 +132,7 @@ header {
 .btn-no { background: #3e000c; color: var(--danger); border: 1px solid var(--danger); }
 .btn-veto { background: #331e00; color: var(--veto); border: 1px solid var(--veto); max-width: 60px; font-size: 0.8rem; }
 
-/* Kalender */
+/* Kalender Styles */
 .cal-grid { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; gap: 4px; background: var(--card-bg); padding: 10px; border-radius: 0 0 12px 12px; }
 .cal-day { aspect-ratio: 1/1; text-align: center; padding: 5px; position: relative; font-size: 0.9rem; cursor: pointer; background: #252525; border-radius: 4px; }
 .cal-day.today { border: 1px solid var(--primary); color: var(--primary); }
@@ -132,10 +149,26 @@ header {
 .btn-dec { background: #333; color: white; }
 
 .list-item { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+/* Task Check Button */
 .check-btn { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--secondary); background: transparent; color: var(--secondary); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .check-btn.confirm-wait { border-color: var(--warn); color: var(--warn); background: rgba(255, 202, 40, 0.1); transform: scale(1.1); }
-.task-assigned-me { border-left: 4px solid var(--secondary); background: rgba(3, 218, 198, 0.05); }
-.task-assigned-other { border-left: 4px solid var(--danger); opacity: 0.7; background: rgba(207, 102, 121, 0.05); }
+
+/* Task Bearbeiten Button (Klein) */
+.icon-btn-small {
+    background: transparent;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 5px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+.icon-btn-small:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-main);
+}
 
 /* Modals */
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; }
@@ -144,8 +177,12 @@ header {
 
 input, select { background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
 button.primary { background: var(--primary); color: black; font-weight: bold; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; pointer-events: auto; }
+.module-container { padding: 15px; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
-/* GÄSTEBUCH (Dein Design) */
+/* =========================================
+   2. GÄSTEBUCH STYLES (Dein Design)
+   ========================================= */
 .gb-wrapper { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; padding: 20px; line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; align-items: center; margin: -15px; padding-top: 60px; }
 .gb-wrapper h1 { text-align: center; color: #fff; margin-bottom: 5px; font-weight: 600; }
 .gb-wrapper p.subtitle { text-align: center; color: #e0e0e0; margin-bottom: 35px; margin-top: 0; font-weight: 300; }
@@ -160,3 +197,22 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
 .gb-entry-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 4px solid #667eea; color: #4a5568; text-align: left; width: 100%; }
 .gb-entry-header { display: flex; justify-content: space-between; font-weight: bold; color: #2d3748; margin-bottom: 5px; }
 .gb-entry-meta { font-size: 0.8rem; color: #a0aec0; margin-top: 5px; }
+
+/* --- TASK ZUWEISUNG RAHMEN --- */
+.task-assigned-me {
+    border-left: 4px solid var(--secondary);
+    border-right: 1px solid var(--secondary);
+    border-top: 1px solid var(--secondary);
+    border-bottom: 1px solid var(--secondary);
+    background: rgba(3, 218, 198, 0.05); /* Ganz leichtes Türkis */
+    box-shadow: 0 0 10px rgba(3, 218, 198, 0.1);
+}
+
+.task-assigned-other {
+    border-left: 4px solid var(--danger);
+    border-right: 1px solid var(--danger);
+    border-top: 1px solid var(--danger);
+    border-bottom: 1px solid var(--danger);
+    opacity: 0.7; /* Leicht ausgegraut */
+    background: rgba(207, 102, 121, 0.05);
+}
