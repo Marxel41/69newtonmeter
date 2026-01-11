@@ -7,10 +7,31 @@ const ShoppingModule = {
         container.innerHTML = `
             <div class="add-box" style="background:var(--card-bg); padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px;">
                 <input type="text" id="shop-input" placeholder="Was fehlt?" style="margin:0;">
-                <button class="primary" onclick="window.ShoppingModule.addItem()" style="width:auto; margin:0;">+</button>
+                <button id="btn-add-shop" class="primary" style="width:auto; margin:0;">+</button>
             </div>
             <div id="shopping-list">Lade...</div>
         `;
+        
+        // EVENT LISTENER
+        document.getElementById('btn-add-shop').addEventListener('click', () => this.addItem());
+
+        const listDiv = document.getElementById('shopping-list');
+        listDiv.addEventListener('click', (e) => {
+            // A. Edit Text
+            const textTarget = e.target.closest('.shop-clickable-text');
+            if (textTarget) {
+                const id = textTarget.dataset.id;
+                this.openEdit(id);
+                return;
+            }
+            // B. Check Button
+            const checkBtn = e.target.closest('.check-btn');
+            if (checkBtn) {
+                const id = checkBtn.id.replace('shop-btn-', '');
+                this.handleCheck(id);
+            }
+        });
+
         await this.load();
     },
 
@@ -34,50 +55,66 @@ const ShoppingModule = {
         }
 
         this.items.forEach(item => {
-            // Text ist klickbar
             list.innerHTML += `
                 <div class="list-item" id="shop-row-${item.id}">
-                    <div style="display:flex; flex-direction:column; flex:1; cursor:pointer;" onclick="window.ShoppingModule.openEdit('${item.id}')">
+                    <div class="shop-clickable-text" data-id="${item.id}" style="display:flex; flex-direction:column; flex:1; cursor:pointer;">
                         <span style="font-weight:500;">${item.item}</span>
                     </div>
                     <div style="display:flex; gap:5px; align-items:center;">
-                        <button id="shop-btn-${item.id}" class="check-btn" onclick="window.ShoppingModule.handleCheck('${item.id}')">✔</button>
+                        <button id="shop-btn-${item.id}" class="check-btn">✔</button>
                     </div>
                 </div>`;
         });
     },
 
+    // --- DYNAMISCHES EDIT MODAL ---
     openEdit(id) {
-        const item = this.items.find(i => i.id === id);
+        // ID Typ-Sicherer Vergleich
+        const item = this.items.find(i => i.id == id);
         if(!item) return;
 
-        const modal = document.getElementById('edit-modal');
-        if(modal) {
-            modal.style.display = 'flex';
-            document.getElementById('edit-title').value = item.item;
-            
-            // Punkte-Feld ausblenden
-            const pWrapper = document.getElementById('edit-points-wrapper');
-            if(pWrapper) pWrapper.style.display = 'none';
-            
-            // Neuen Listener setzen
-            const oldBtn = document.getElementById('edit-save-btn');
-            const newBtn = oldBtn.cloneNode(true);
-            oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-            
-            newBtn.onclick = () => this.saveEdit(id);
-        } else {
-            alert("FEHLER: 'edit-modal' fehlt in der index.html");
+        // Wir nutzen das gleiche JS-generierte Modal wie bei Tasks, falls vorhanden, sonst bauen wir es
+        let modal = document.getElementById('js-edit-modal');
+        if (!modal) {
+            // Falls TasksModule das Modal noch nicht gebaut hat -> hier bauen wir es
+            modal = document.createElement('div');
+            modal.id = 'js-edit-modal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <button class="close-modal-x">&times;</button>
+                    <h3>Bearbeiten</h3>
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Titel</label>
+                        <input type="text" id="js-edit-title" style="width:100%;">
+                    </div>
+                    <div id="js-edit-points-wrap" style="margin-bottom:15px;">
+                        <label style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Punkte</label>
+                        <input type="number" id="js-edit-points" style="width:100%;">
+                    </div>
+                    <button id="js-edit-save" class="primary">Speichern</button>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.close-modal-x').onclick = () => modal.style.display = 'none';
         }
+
+        document.getElementById('js-edit-title').value = item.item;
+        document.getElementById('js-edit-points-wrap').style.display = 'none'; // Keine Punkte
+
+        const saveBtn = document.getElementById('js-edit-save');
+        const newBtn = saveBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+        newBtn.addEventListener('click', () => this.saveEdit(id));
+
+        modal.style.display = 'flex';
     },
 
     async saveEdit(id) {
-        const newTitle = document.getElementById('edit-title').value;
+        const newTitle = document.getElementById('js-edit-title').value;
         if(!newTitle) return;
 
-        document.getElementById('edit-modal').style.display = 'none';
+        document.getElementById('js-edit-modal').style.display = 'none';
 
-        // Optimistic UI
         const row = document.getElementById(`shop-row-${id}`);
         if(row) {
             const titleEl = row.querySelector('span');
