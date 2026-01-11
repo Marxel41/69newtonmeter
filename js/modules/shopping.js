@@ -34,8 +34,7 @@ const ShoppingModule = {
         }
 
         this.items.forEach(item => {
-            // FIX: Textbereich ist jetzt klickbar (cursor:pointer) und öffnet das Edit-Fenster
-            // Kein Stift-Button mehr nötig.
+            // Text ist klickbar
             list.innerHTML += `
                 <div class="list-item" id="shop-row-${item.id}">
                     <div style="display:flex; flex-direction:column; flex:1; cursor:pointer;" onclick="window.ShoppingModule.openEdit('${item.id}')">
@@ -48,7 +47,6 @@ const ShoppingModule = {
         });
     },
 
-    // --- EDIT LOGIK ---
     openEdit(id) {
         const item = this.items.find(i => i.id === id);
         if(!item) return;
@@ -58,16 +56,18 @@ const ShoppingModule = {
             modal.style.display = 'flex';
             document.getElementById('edit-title').value = item.item;
             
-            // Punkte-Feld ausblenden (gibt es beim Einkauf nicht)
+            // Punkte-Feld ausblenden
             const pWrapper = document.getElementById('edit-points-wrapper');
             if(pWrapper) pWrapper.style.display = 'none';
             
-            // Alten Listener sauber entfernen & neuen setzen
+            // Neuen Listener setzen
             const oldBtn = document.getElementById('edit-save-btn');
             const newBtn = oldBtn.cloneNode(true);
             oldBtn.parentNode.replaceChild(newBtn, oldBtn);
             
             newBtn.onclick = () => this.saveEdit(id);
+        } else {
+            alert("FEHLER: 'edit-modal' fehlt in der index.html");
         }
     },
 
@@ -77,7 +77,7 @@ const ShoppingModule = {
 
         document.getElementById('edit-modal').style.display = 'none';
 
-        // Optimistic UI Update
+        // Optimistic UI
         const row = document.getElementById(`shop-row-${id}`);
         if(row) {
             const titleEl = row.querySelector('span');
@@ -93,7 +93,6 @@ const ShoppingModule = {
         await this.load();
     },
 
-    // --- CHECK LOGIK (Bleibt gleich) ---
     handleCheck(id) {
         const btn = document.getElementById(`shop-btn-${id}`);
         if(!btn) return;
@@ -138,5 +137,4 @@ const ShoppingModule = {
     }
 };
 
-// GLOBAL MACHEN!
 window.ShoppingModule = ShoppingModule;
