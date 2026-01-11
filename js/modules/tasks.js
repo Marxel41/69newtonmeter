@@ -47,7 +47,6 @@ const TasksModule = {
 
             this.tasks = result.data.filter(t => {
                 if (t.status !== 'open') return false;
-                // Zeit-Filter: Heute erst ab 10 Uhr anzeigen (außer überfällig)
                 if (t.date > todayStr) return false; 
                 if (t.date === todayStr && currentHour < 10) return false;
                 return true;
@@ -71,7 +70,6 @@ const TasksModule = {
         const now = new Date().getTime();
 
         filtered.forEach(task => {
-            // Reservierungs-Logik
             let assignTime = task.assigned_at ? new Date(task.assigned_at).getTime() : 0;
             let hoursPassed = (now - assignTime) / (1000 * 60 * 60);
             
@@ -83,32 +81,26 @@ const TasksModule = {
             let infoText = "";
             let pointsDisplay = `<small style="color:var(--text-muted)">${task.points} Pkt</small>`;
 
-            // Bearbeiten Button (immer verfügbar für nicht-gesperrte)
-            const editBtn = `<button class="icon-btn-small" onclick="window.TasksModule.openEdit('${task.id}')">✏️</button>`;
+            // Keine separaten Edit-Buttons mehr!
+            // Bearbeiten geht jetzt über Klick auf den Textbereich
 
             if (!isLocked) {
-                // FREI: Bearbeiten + Reservieren + Erledigen
+                // FREI: Reservieren + Erledigen
                 actionHtml = `
-                    <div style="display:flex; gap:5px; align-items:center;">
-                        ${editBtn}
+                    <div style="display:flex; gap:10px;">
                         <button class="check-btn" onclick="window.TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted); font-size:1rem;">✋</button>
                         <button id="btn-${task.id}" class="check-btn" onclick="window.TasksModule.handleCheck('${task.id}')">✔</button>
                     </div>`;
             } 
             else if (isMyTask) {
-                // MEINS: Bearbeiten + Erledigen + Info
+                // MEINS: Erledigen
                 rowClass = "task-assigned-me";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--secondary); font-size:0.8rem; display:block;">⏳ ${minsLeft} Min. reserviert</span>`;
-                
-                actionHtml = `
-                    <div style="display:flex; gap:5px; align-items:center;">
-                        ${editBtn}
-                        <button id="btn-${task.id}" class="check-btn" onclick="window.TasksModule.handleCheck('${task.id}')">✔</button>
-                    </div>`;
+                actionHtml = `<button id="btn-${task.id}" class="check-btn" onclick="window.TasksModule.handleCheck('${task.id}')">✔</button>`;
             } 
             else {
-                // GESPERRT: Nur Info
+                // GESPERRT
                 rowClass = "task-assigned-other";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--danger); font-size:0.8rem; display:block;">🔒 ${task.assignee} (${minsLeft} Min)</span>`;
@@ -117,7 +109,8 @@ const TasksModule = {
 
             listDiv.innerHTML += `
                 <div class="list-item ${rowClass}" id="row-${task.id}">
-                    <div class="task-info" style="flex:1;">
+                    <!-- FIX: Textbereich ist klickbar für Edit -->
+                    <div class="task-info" style="flex:1; cursor:pointer;" onclick="window.TasksModule.openEdit('${task.id}')">
                         <strong>${task.title}</strong>
                         ${pointsDisplay}
                         ${infoText}
@@ -127,7 +120,6 @@ const TasksModule = {
         });
     },
 
-    // --- BEARBEITEN ---
     openEdit(id) {
         const task = this.tasks.find(t => t.id === id);
         if(!task) return;
@@ -141,7 +133,6 @@ const TasksModule = {
             const pWrapper = document.getElementById('edit-points-wrapper');
             if(pWrapper) pWrapper.style.display = 'block'; 
             
-            // Alten Listener entfernen durch Klonen oder neuen setzen
             const oldBtn = document.getElementById('edit-save-btn');
             const newBtn = oldBtn.cloneNode(true);
             oldBtn.parentNode.replaceChild(newBtn, oldBtn);
@@ -158,12 +149,8 @@ const TasksModule = {
 
         document.getElementById('edit-modal').style.display = 'none';
 
-        // Optimistic UI Update
         const row = document.getElementById(`row-${id}`);
-        if(row) {
-            const titleEl = row.querySelector('strong');
-            if(titleEl) titleEl.innerText = newTitle;
-        }
+        if(row) row.querySelector('strong').innerText = newTitle;
 
         await API.post('update', { 
             sheet: 'Tasks', 
@@ -174,7 +161,6 @@ const TasksModule = {
         await this.loadTasks(this.currentType);
     },
 
-    // --- LOGIK: Reservieren & Erledigen ---
     async assignTask(id) {
         const row = document.getElementById(`row-${id}`);
         if(row) row.style.opacity = '0.5';
@@ -185,7 +171,6 @@ const TasksModule = {
     handleCheck(id) {
         const btn = document.getElementById(`btn-${id}`);
         if(!btn) return;
-        
         if (btn.classList.contains('confirm-wait')) {
             this.completeTaskOptimistic(id);
         } else {
@@ -208,7 +193,6 @@ const TasksModule = {
             setTimeout(() => row.remove(), 500); 
         }
         if(this.clickTimer[id]) clearTimeout(this.clickTimer[id]);
-        
         await API.post('update', { sheet: 'Tasks', id: id, updates: JSON.stringify({ status: 'done' }), user: App.user.name });
     },
 
@@ -231,7 +215,6 @@ const TasksModule = {
         await this.loadTasks(type);
     },
     
-    // --- RANKING ---
     async loadRanking() {
         const listDiv = document.getElementById('actual-list');
         listDiv.innerHTML = "Lade Ranking...";
@@ -277,5 +260,4 @@ const TasksModule = {
     }
 };
 
-// GLOBAL: Wichtig für onclick im HTML
 window.TasksModule = TasksModule;
