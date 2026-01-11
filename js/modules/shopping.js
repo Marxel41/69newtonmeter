@@ -34,13 +34,14 @@ const ShoppingModule = {
         }
 
         this.items.forEach(item => {
+            // FIX: Textbereich ist jetzt klickbar (cursor:pointer) und öffnet das Edit-Fenster
+            // Kein Stift-Button mehr nötig.
             list.innerHTML += `
                 <div class="list-item" id="shop-row-${item.id}">
-                    <div style="display:flex; flex-direction:column; flex:1;">
+                    <div style="display:flex; flex-direction:column; flex:1; cursor:pointer;" onclick="window.ShoppingModule.openEdit('${item.id}')">
                         <span style="font-weight:500;">${item.item}</span>
                     </div>
                     <div style="display:flex; gap:5px; align-items:center;">
-                        <button class="icon-btn-small" onclick="window.ShoppingModule.openEdit('${item.id}')">✏️</button>
                         <button id="shop-btn-${item.id}" class="check-btn" onclick="window.ShoppingModule.handleCheck('${item.id}')">✔</button>
                     </div>
                 </div>`;
@@ -61,7 +62,7 @@ const ShoppingModule = {
             const pWrapper = document.getElementById('edit-points-wrapper');
             if(pWrapper) pWrapper.style.display = 'none';
             
-            // Clean Click Listener
+            // Alten Listener sauber entfernen & neuen setzen
             const oldBtn = document.getElementById('edit-save-btn');
             const newBtn = oldBtn.cloneNode(true);
             oldBtn.parentNode.replaceChild(newBtn, oldBtn);
@@ -76,7 +77,7 @@ const ShoppingModule = {
 
         document.getElementById('edit-modal').style.display = 'none';
 
-        // Optimistic UI
+        // Optimistic UI Update
         const row = document.getElementById(`shop-row-${id}`);
         if(row) {
             const titleEl = row.querySelector('span');
@@ -92,7 +93,7 @@ const ShoppingModule = {
         await this.load();
     },
 
-    // --- CHECK LOGIK ---
+    // --- CHECK LOGIK (Bleibt gleich) ---
     handleCheck(id) {
         const btn = document.getElementById(`shop-btn-${id}`);
         if(!btn) return;
