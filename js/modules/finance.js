@@ -15,10 +15,12 @@ const FinanceModule = {
     // ==========================================
 
     currentView: 'split', // 'split' oder 'stats'
+    cId: null,
 
     async init(cId) {
-        const container = document.getElementById(cId);
         this.cId = cId;
+        const container = document.getElementById(cId);
+        if(!container) return;
         
         // Check: Gibt es lokale Änderungen?
         const savedFixed = localStorage.getItem('wg_finance_fixed');
@@ -28,30 +30,36 @@ const FinanceModule = {
 
         this.renderShell();
         await this.load();
+
+        // --- EVENT DELEGATION FÜR DEN VERLAUF ---
+        // Wir fangen Klicks auf dem Haupt-Container ab
+        container.addEventListener('click', (e) => {
+            const item = e.target.closest('.finance-item-clickable');
+            if (item) {
+                const id = item.dataset.id;
+                this.openEdit(id);
+            }
+        });
     },
 
     renderShell() {
         const container = document.getElementById(this.cId);
+        if(!container) return;
         
-        const navHtml = `
+        container.innerHTML = `
             <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
-                <button onclick="FinanceModule.switchView('split')" id="btn-view-split" style="flex:1; padding:8px; border-radius:8px; border:1px solid #444; background:${this.currentView === 'split' ? 'var(--primary)' : 'transparent'}; color:${this.currentView === 'split' ? 'black' : 'var(--text-muted)'}; cursor:pointer;">Abrechnung</button>
-                <button onclick="FinanceModule.switchView('stats')" id="btn-view-stats" style="flex:1; padding:8px; border-radius:8px; border:1px solid #444; background:${this.currentView === 'stats' ? 'var(--primary)' : 'transparent'}; color:${this.currentView === 'stats' ? 'black' : 'var(--text-muted)'}; cursor:pointer;">Monatsübersicht</button>
+                <button onclick="window.FinanceModule.switchView('split')" id="btn-view-split" style="flex:1; padding:8px; border-radius:8px; border:1px solid #444; background:${this.currentView === 'split' ? 'var(--primary)' : 'transparent'}; color:${this.currentView === 'split' ? 'black' : 'var(--text-muted)'}; cursor:pointer;">Abrechnung</button>
+                <button onclick="window.FinanceModule.switchView('stats')" id="btn-view-stats" style="flex:1; padding:8px; border-radius:8px; border:1px solid #444; background:${this.currentView === 'stats' ? 'var(--primary)' : 'transparent'}; color:${this.currentView === 'stats' ? 'black' : 'var(--text-muted)'}; cursor:pointer;">Monatsübersicht</button>
             </div>
             <div id="finance-content"></div>
         `;
-        container.innerHTML = navHtml;
     },
 
     switchView(view) {
         this.currentView = view;
         this.renderShell(); 
-        
-        if (view === 'split') {
-            this.renderSplitView();
-        } else {
-            this.renderStatsView();
-        }
+        if (view === 'split') this.renderSplitView();
+        else this.renderStatsView();
     },
 
     async load() {
@@ -67,13 +75,16 @@ const FinanceModule = {
             if (this.currentView === 'split') this.renderSplitView();
             else this.renderStatsView();
         } else {
-            document.getElementById('finance-content').innerHTML = "Fehler beim Laden.";
+            const el = document.getElementById('finance-content');
+            if(el) el.innerHTML = "Fehler beim Laden.";
         }
     },
 
     // --- VIEW 1: SPLITWISE ---
     renderSplitView() {
         const container = document.getElementById('finance-content');
+        if(!container) return;
+
         container.innerHTML = `
             <div class="add-box" style="background:var(--card-bg); padding:20px; border-radius:12px; margin-bottom:20px; text-align:center;">
                 <h3 style="margin-top:0; color:var(--text-muted);">Dein Stand</h3>
@@ -81,8 +92,8 @@ const FinanceModule = {
                 <div id="debt-summary" style="font-size:0.9rem; color:#888; margin-bottom:15px;"></div>
                 
                 <div style="display:flex; gap:10px;">
-                    <button class="primary" onclick="FinanceModule.showAddExpense()" style="background:var(--danger); color:white;">💸 Ausgabe</button>
-                    <button class="primary" onclick="FinanceModule.showSettleUp()" style="background:var(--secondary); color:black;">🤝 Begleichen</button>
+                    <button class="primary" onclick="window.FinanceModule.showAddExpense()" style="background:var(--danger); color:white;">💸 Ausgabe</button>
+                    <button class="primary" onclick="window.FinanceModule.showSettleUp()" style="background:var(--secondary); color:black;">🤝 Begleichen</button>
                 </div>
             </div>
 
@@ -97,14 +108,14 @@ const FinanceModule = {
     // --- VIEW 2: MONATSÜBERSICHT ---
     renderStatsView() {
         const container = document.getElementById('finance-content');
+        if(!container) return;
         
-        let html = `
+        container.innerHTML = `
             <div style="text-align:right; margin-bottom:10px;">
-                <button onclick="FinanceModule.showFixedCostSettings()" style="background:transparent; border:1px solid #555; color:var(--text-muted); font-size:0.8rem; padding:5px 10px; border-radius:15px; cursor:pointer;">⚙️ Werte anpassen</button>
+                <button onclick="window.FinanceModule.showFixedCostSettings()" style="background:transparent; border:1px solid #555; color:var(--text-muted); font-size:0.8rem; padding:5px 10px; border-radius:15px; cursor:pointer;">⚙️ Werte anpassen</button>
             </div>
             <div id="stats-list"></div>
         `;
-        container.innerHTML = html;
 
         const monthlyData = {}; 
 
@@ -135,7 +146,7 @@ const FinanceModule = {
             const monthName = new Date(y, m - 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
 
             listDiv.innerHTML += `
-                <div class="list-item" style="display:block; cursor:pointer;" onclick="FinanceModule.toggleMonthDetails('${monthKey}')">
+                <div class="list-item" style="display:block; cursor:pointer;" onclick="window.FinanceModule.toggleMonthDetails('${monthKey}')">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong>${monthName}</strong>
                         <span style="font-weight:bold;">${total.toFixed(2)} €</span>
@@ -173,12 +184,6 @@ const FinanceModule = {
             return part;
         });
 
-        const chartStyle = `
-            width: 140px; height: 140px; border-radius: 50%; 
-            background: conic-gradient(${gradientParts.join(', ')});
-            margin: 0 auto;
-        `;
-
         const legendHtml = data.map(item => `
             <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
                 <span style="display:flex; align-items:center;">
@@ -191,7 +196,7 @@ const FinanceModule = {
 
         return `
             <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap; justify-content:center;">
-                <div style="${chartStyle}"></div>
+                <div style="width: 140px; height: 140px; border-radius: 50%; background: conic-gradient(${gradientParts.join(', ')}); margin: 0 auto;"></div>
                 <div style="flex:1; min-width:130px;">${legendHtml}</div>
             </div>
         `;
@@ -199,11 +204,11 @@ const FinanceModule = {
 
     showFixedCostSettings() {
         const modal = document.getElementById('finance-modal');
+        if(!modal) return;
         modal.innerHTML = `
             <div class="modal-content">
                 <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
                 <h3>Fixkosten (Lokal)</h3>
-                
                 <label style="font-size:0.8rem;">Miete</label>
                 <input type="number" id="fc-rent" value="${this.fixedCosts.rent}">
                 <label style="font-size:0.8rem;">Nebenkosten</label>
@@ -212,8 +217,7 @@ const FinanceModule = {
                 <input type="number" id="fc-net" value="${this.fixedCosts.internet}">
                 <label style="font-size:0.8rem;">Strom</label>
                 <input type="number" id="fc-pow" value="${this.fixedCosts.power}">
-                
-                <button class="primary" onclick="FinanceModule.saveFixedCosts()">Speichern</button>
+                <button class="primary" onclick="window.FinanceModule.saveFixedCosts()">Speichern</button>
             </div>`;
         modal.style.display = 'flex';
     },
@@ -307,17 +311,17 @@ const FinanceModule = {
 
             let details = isExpense ? `bezahlt von <strong>${t.payer}</strong>` : `<strong>${t.payer}</strong> ➔ <strong>${t.recipient}</strong>`;
 
-            // FIX: Jetzt klickbar für Bearbeiten!
+            // FIX: Klasse 'finance-item-clickable' und 'data-id' für Event Delegation
             list.innerHTML += `
-                <div class="list-item" onclick="window.FinanceModule.openEdit('${t.id}')" style="cursor:pointer;">
-                    <div style="display:flex; align-items:center; gap:10px;">
+                <div class="list-item finance-item-clickable" data-id="${t.id}" style="cursor:pointer;">
+                    <div style="display:flex; align-items:center; gap:10px; pointer-events:none;">
                         <span style="font-size:1.5rem;">${icon}</span>
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:bold;">${t.description}</span>
                             <small style="color:var(--text-muted);">${details} • ${dateStr}</small>
                         </div>
                     </div>
-                    <div style="font-weight:bold; ${amountClass};">
+                    <div style="font-weight:bold; ${amountClass}; pointer-events:none;">
                         ${parseFloat(t.amount).toFixed(2)} €
                     </div>
                 </div>
@@ -325,15 +329,14 @@ const FinanceModule = {
         });
     },
 
-    // --- NEUE EDIT LOGIK ---
+    // --- BEARBEITEN LOGIK ---
     openEdit(id) {
-        const t = this.transactions.find(trans => trans.id === id);
+        // ID Typ-tolerant vergleichen
+        const t = this.transactions.find(trans => trans.id == id);
         if(!t) return;
 
-        // Wir nutzen das globale Edit-Modal, passen es aber an
         let modal = document.getElementById('js-edit-modal');
         if (!modal) {
-            // Falls es noch nicht existiert (z.B. noch nie Task bearbeitet), bauen wir es schnell
             modal = document.createElement('div');
             modal.id = 'js-edit-modal';
             modal.className = 'modal';
@@ -346,7 +349,7 @@ const FinanceModule = {
                         <input type="text" id="js-edit-title" style="width:100%;">
                     </div>
                     <div id="js-edit-points-wrap" style="margin-bottom:15px;">
-                        <label id="lbl-edit-points" style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Punkte</label>
+                        <label id="lbl-edit-points" style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Betrag (€)</label>
                         <input type="number" id="js-edit-points" style="width:100%;" step="0.01">
                     </div>
                     <button id="js-edit-save" class="primary">Speichern</button>
@@ -355,19 +358,12 @@ const FinanceModule = {
             modal.querySelector('.close-modal-x').onclick = () => modal.style.display = 'none';
         }
 
-        // Labels anpassen für Finanzen
-        const lblTitle = document.getElementById('lbl-edit-title');
-        const lblPoints = document.getElementById('lbl-edit-points');
-        if(lblTitle) lblTitle.innerText = "Beschreibung";
-        if(lblPoints) lblPoints.innerText = "Betrag (€)";
-
-        // Werte setzen
+        // Labels für Finanzen anpassen
+        document.getElementById('lbl-edit-title').innerText = "Beschreibung";
         document.getElementById('js-edit-title').value = t.description;
         document.getElementById('js-edit-points').value = t.amount;
-        document.getElementById('js-edit-points-wrap').style.display = 'block';
 
         const saveBtn = document.getElementById('js-edit-save');
-        // Alten Listener entfernen durch Klonen
         const newBtn = saveBtn.cloneNode(true);
         saveBtn.parentNode.replaceChild(newBtn, saveBtn);
         
@@ -384,15 +380,13 @@ const FinanceModule = {
 
         document.getElementById('js-edit-modal').style.display = 'none';
 
-        // Optimistic UI (Lokal updaten für sofortiges Feedback)
-        const t = this.transactions.find(trans => trans.id === id);
+        // Optimistic UI Update
+        const t = this.transactions.find(trans => trans.id == id);
         if(t) {
             t.description = newDesc;
             t.amount = newAmount;
-            // Neu berechnen
             this.calculateDebts();
             if (this.currentView === 'split') this.renderHistory();
-            else this.renderStatsView();
         }
 
         await API.post('update', { 
@@ -401,24 +395,26 @@ const FinanceModule = {
             updates: JSON.stringify({ description: newDesc, amount: newAmount }) 
         });
         
-        await this.load(); // Sicherer Reload am Ende
+        await this.load();
     },
 
     showAddExpense() {
         const modal = document.getElementById('finance-modal');
+        if(!modal) return;
         modal.innerHTML = `
             <div class="modal-content">
                 <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
                 <h3>Ausgabe hinzufügen</h3>
                 <input type="number" id="fin-amount" placeholder="Betrag (z.B. 12.50)" step="0.01">
                 <input type="text" id="fin-desc" placeholder="Wofür? (z.B. Pizza)">
-                <button class="primary" onclick="FinanceModule.saveTransaction('expense')">Speichern</button>
+                <button class="primary" onclick="window.FinanceModule.saveTransaction('expense')">Speichern</button>
             </div>`;
         modal.style.display = 'flex';
     },
 
     async showSettleUp() {
         const modal = document.getElementById('finance-modal');
+        if(!modal) return;
         modal.innerHTML = `<div class="modal-content" style="text-align:center;"><h3>Lade...</h3><div style="margin:20px;">⏳</div></div>`;
         modal.style.display = 'flex';
 
@@ -459,7 +455,7 @@ const FinanceModule = {
                     <input type="hidden" id="fin-recipient" value="${target.user}">
                     <input type="hidden" id="fin-amount" value="${payAmount}">
                     <input type="hidden" id="fin-desc" value="Rückzahlung">
-                    <button class="primary" style="background:var(--secondary); color:black; font-weight:bold;" onclick="FinanceModule.saveTransaction('payment')">Betrag ausgeglichen</button>
+                    <button class="primary" style="background:var(--secondary); color:black; font-weight:bold;" onclick="window.FinanceModule.saveTransaction('payment')">Betrag ausgeglichen</button>
                 `;
             }
         }
