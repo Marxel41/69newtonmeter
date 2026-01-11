@@ -1,5 +1,5 @@
 // HIER DEINE URL EINFÜGEN!
-const API_URL = "https://script.google.com/macros/s/AKfycbzX5fIR2OjBuCyhwg2XFcwbriFG8mdZO_YaZVhkUojMe7z0DZMpoYcb07i2e4KUxAgPEQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxEYvu-Bb6SpbVPkEvqgDOmG8R6RW5F6m2D4gHfox72lxcduei8DBirjQ_R0oKaN1D8og/exec";
 
 const API = {
     async post(action, data = {}) {
