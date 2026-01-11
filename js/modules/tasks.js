@@ -81,11 +81,7 @@ const TasksModule = {
             let infoText = "";
             let pointsDisplay = `<small style="color:var(--text-muted)">${task.points} Pkt</small>`;
 
-            // Keine separaten Edit-Buttons mehr!
-            // Bearbeiten geht jetzt über Klick auf den Textbereich
-
             if (!isLocked) {
-                // FREI: Reservieren + Erledigen
                 actionHtml = `
                     <div style="display:flex; gap:10px;">
                         <button class="check-btn" onclick="window.TasksModule.assignTask('${task.id}')" style="border-color:var(--text-muted); color:var(--text-muted); font-size:1rem;">✋</button>
@@ -93,14 +89,12 @@ const TasksModule = {
                     </div>`;
             } 
             else if (isMyTask) {
-                // MEINS: Erledigen
                 rowClass = "task-assigned-me";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--secondary); font-size:0.8rem; display:block;">⏳ ${minsLeft} Min. reserviert</span>`;
                 actionHtml = `<button id="btn-${task.id}" class="check-btn" onclick="window.TasksModule.handleCheck('${task.id}')">✔</button>`;
             } 
             else {
-                // GESPERRT
                 rowClass = "task-assigned-other";
                 let minsLeft = Math.round((2 - hoursPassed) * 60);
                 infoText = `<span style="color:var(--danger); font-size:0.8rem; display:block;">🔒 ${task.assignee} (${minsLeft} Min)</span>`;
@@ -109,7 +103,6 @@ const TasksModule = {
 
             listDiv.innerHTML += `
                 <div class="list-item ${rowClass}" id="row-${task.id}">
-                    <!-- FIX: Textbereich ist klickbar für Edit -->
                     <div class="task-info" style="flex:1; cursor:pointer;" onclick="window.TasksModule.openEdit('${task.id}')">
                         <strong>${task.title}</strong>
                         ${pointsDisplay}
@@ -121,6 +114,7 @@ const TasksModule = {
     },
 
     openEdit(id) {
+        console.log("Edit clicked for " + id);
         const task = this.tasks.find(t => t.id === id);
         if(!task) return;
 
@@ -138,6 +132,8 @@ const TasksModule = {
             oldBtn.parentNode.replaceChild(newBtn, oldBtn);
             
             newBtn.onclick = () => this.saveEdit(id);
+        } else {
+            alert("Fehler: Das 'edit-modal' fehlt in der index.html!");
         }
     },
 
@@ -150,7 +146,10 @@ const TasksModule = {
         document.getElementById('edit-modal').style.display = 'none';
 
         const row = document.getElementById(`row-${id}`);
-        if(row) row.querySelector('strong').innerText = newTitle;
+        if(row) {
+            const titleEl = row.querySelector('strong');
+            if(titleEl) titleEl.innerText = newTitle;
+        }
 
         await API.post('update', { 
             sheet: 'Tasks', 
