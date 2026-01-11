@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
-    <link rel="stylesheet" href="style.css?v=14">
+    <!-- CACHE BUSTER V15 -->
+    <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
     <header>
         <div style="display:flex; align-items:center; gap:5px;">
-             <!-- ZURÜCK BUTTON -->
              <button id="nav-back-btn" class="icon-btn" style="display:none; font-size:1.4rem; font-weight:bold; color:var(--primary); padding-right:15px;" onclick="window.App.showDashboard()">
                 ❮
              </button>
@@ -24,15 +24,12 @@
     </header>
 
     <main id="app-container" style="padding-top: 20px;">
-        <!-- Login Screen -->
         <div id="login-screen">
             <h2>Willkommen</h2>
             <input type="text" id="login-name" placeholder="Name">
             <input type="password" id="login-pin" placeholder="PIN" inputmode="numeric">
-            
             <button id="login-btn" class="primary">Starten</button>
             <p id="login-msg" style="color: var(--danger);"></p>
-            
             <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 20px;">
                 <p style="color:#666; font-size:0.8rem; margin-bottom:10px;">Nur zu Besuch?</p>
                 <button id="guest-btn" style="background:transparent; border:1px solid #555; color:#aaa; padding:8px 15px; border-radius:20px; cursor:pointer;">
@@ -42,7 +39,26 @@
         </div>
     </main>
 
-    <!-- Modals -->
+    <!-- NEU: EDIT MODAL -->
+    <div id="edit-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('edit-modal').style.display='none'">&times;</button>
+            <h3>Eintrag bearbeiten</h3>
+            
+            <label style="font-size:0.8rem; color:#888;">Titel / Name</label>
+            <input type="text" id="edit-title">
+            
+            <div id="edit-points-wrapper">
+                <label style="font-size:0.8rem; color:#888;">Punkte</label>
+                <input type="number" id="edit-points">
+            </div>
+
+            <!-- Speichern Button wird dynamisch zugewiesen -->
+            <button id="edit-save-btn" class="primary">Speichern</button>
+        </div>
+    </div>
+
+    <!-- Andere Modals -->
     <div id="settings-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('settings-modal').style.display='none'">&times;</button>
@@ -91,7 +107,6 @@
         </div>
     </div>
 
-    <!-- FINANCE MODAL -->
     <div id="finance-modal" class="modal" style="display:none;"></div>
 
     <script src="js/api.js"></script>
@@ -102,7 +117,7 @@
     <script src="js/modules/sodastream.js"></script>
     <script src="js/modules/guestbook.js"></script>
     <script src="js/modules/train.js"></script>
-    <script src="js/modules/finance.js"></script> 
+    <script src="js/modules/finance.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
