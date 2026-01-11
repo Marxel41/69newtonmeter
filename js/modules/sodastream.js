@@ -8,10 +8,8 @@ const SodaModule = {
             <div style="text-align:center; padding:20px;">
                 <h3 style="color:var(--text-muted);">Aktuelle Flasche</h3>
                 
-                <!-- Loading Platzhalter -->
                 <div id="soda-loading" style="margin:40px 0; color:#666;">Verbinde...</div>
 
-                <!-- Inhalt -->
                 <div id="soda-content" style="display:none;">
                     <div class="soda-counter" id="soda-val">?</div>
                     <div class="soda-controls">
@@ -48,10 +46,9 @@ const SodaModule = {
                 this.count = parseInt(countRow ? countRow.value : 0);
                 this.startDate = dateRow ? dateRow.value : null;
                 
-                // UI Freischalten
                 document.getElementById('soda-loading').style.display = 'none';
                 document.getElementById('soda-content').style.display = 'block';
-                this.setLoading(false); // Sicherstellen, dass Buttons aktiv sind
+                this.setLoading(false); 
                 this.updateUI();
             } else {
                 document.getElementById('soda-loading').innerText = "Fehler: Tabelle SodaState nicht gefunden.";
@@ -65,16 +62,14 @@ const SodaModule = {
                     let dStr = '-';
                     try { dStr = new Date(row.date).toLocaleDateString(); } catch(e){}
                     
-                    // Filter für Liter Anzeige: Wenn es wie ein Datum aussieht, ignorieren oder fixen
-                    let litersDisplay = row.liters;
-                    if(typeof row.liters === 'string' && row.liters.includes('T')) {
-                        litersDisplay = "Fehler (Spalten?)"; 
-                    }
+                    // Saubere Anzeige auch wenn Felder leer
+                    const liters = row.liters ? `${row.liters}L` : '? L';
+                    const cost = row.cost ? row.cost : '? €/L';
 
                     hDiv.innerHTML += `
                         <div style="padding:8px 0; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
                             <span>${dStr} <small style="color:#888">(${row.days} Tage)</small></span>
-                            <span>${litersDisplay}L / ${row.cost || '?'}</span>
+                            <span>${liters} / ${cost}</span>
                         </div>`;
                 });
             } else {
@@ -121,14 +116,13 @@ const SodaModule = {
     async finish() {
         if(!confirm("Wirklich resetten?")) return;
         
-        this.setLoading(true); // Buttons sperren
+        this.setLoading(true);
         const result = await API.post('soda_update', { mode: 'reset' });
         
         if(result.status === 'success') {
             this.count = 0;
             this.startDate = new Date().toISOString();
-            await this.loadState(); // Alles neu laden für History
-            // Hier wird setLoading(false) durch loadState aufgerufen
+            await this.loadState(); 
         } else {
             alert("Reset fehlgeschlagen: " + result.message);
             this.setLoading(false);
