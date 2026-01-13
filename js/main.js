@@ -1,6 +1,5 @@
 const App = {
     user: null,
-    editMode: false,
     
     tiles: [
         { id: 'todo', icon: '📌', title: 'To-Dos', wide: false },
@@ -11,18 +10,31 @@ const App = {
         { id: 'soda', icon: '💧', title: 'Soda', wide: false },
         { id: 'train', icon: '🚋', title: 'Bahn', wide: false },
         { id: 'guestbook', icon: '📖', title: 'Gästebuch', wide: false },
-        { id: 'ranking', icon: '🏆', title: 'Ranking', wide: true, subtitle: 'Details >' }
+        { id: 'ranking', icon: '🏆', title: 'Ranking', wide: true }
     ],
 
     init() {
         window.App = this; 
+        
+        // Event Listener für Login
         const loginBtn = document.getElementById('login-btn');
         if(loginBtn) loginBtn.addEventListener('click', () => this.login());
+
+        // Event Listener für Gast-Zugang
+        const guestBtn = document.getElementById('guest-btn');
+        if(guestBtn) guestBtn.addEventListener('click', () => {
+            this.user = { name: "Gast", role: "guest" }; // Temporärer Gast-Status
+            this.loadModule('guestbook_public');
+        });
         
         const savedUser = localStorage.getItem('wg_user');
         if (savedUser) {
-            try { this.user = JSON.parse(savedUser); this.showDashboard(); } 
-            catch (e) { localStorage.removeItem('wg_user'); }
+            try { 
+                this.user = JSON.parse(savedUser); 
+                this.showDashboard(); 
+            } catch (e) { 
+                localStorage.removeItem('wg_user'); 
+            }
         }
     },
 
@@ -37,11 +49,10 @@ const App = {
             localStorage.setItem('wg_user', JSON.stringify(this.user));
             this.showDashboard();
         } else {
-            document.getElementById('login-msg').innerText = result.message || "Fehler";
+            document.getElementById('login-msg').innerText = result.message || "Login fehlgeschlagen";
         }
     },
 
-    // --- NEU: TEST PUSH LOGIK ---
     async testPush() {
         const statusEl = document.getElementById('test-status');
         statusEl.innerText = "Sende...";
@@ -50,7 +61,7 @@ const App = {
         const result = await API.post('test_push');
         
         if (result.status === 'success') {
-            statusEl.innerText = "Gesendet! Prüfe dein Handy.";
+            statusEl.innerText = "Gesendet! Prüfe Discord.";
             statusEl.style.color = "var(--secondary)";
         } else {
             statusEl.innerText = "Fehler: " + result.message;
@@ -59,10 +70,14 @@ const App = {
     },
 
     showDashboard() {
-        const setBtn = document.getElementById('settings-btn');
-        if(setBtn) setBtn.style.display = 'block';
+        // UI für eingeloggte User vorbereiten
+        document.getElementById('nav-back-btn').style.display = 'none';
+        document.getElementById('settings-btn').style.display = 'block';
+        
         const userInfo = document.getElementById('user-info');
-        if (userInfo && this.user) userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
+        if (userInfo && this.user) {
+            userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
+        }
         
         const c = document.getElementById('app-container');
         let tilesHtml = "";
@@ -78,6 +93,7 @@ const App = {
             <div class="dashboard-grid">${tilesHtml}</div>
             <div style="padding:15px;"><div id="calendar-wrapper"></div></div>
         `;
+        
         if(typeof CalendarModule !== 'undefined') CalendarModule.init('calendar-wrapper');
     },
 
@@ -92,7 +108,13 @@ const App = {
                 <div id="${id}">Lade...</div>
             </div>`;
 
-        if(moduleName === 'finance') { container.innerHTML = shell('Finanzen', 'fin-cont'); FinanceModule.init('fin-cont'); }
+        // Unterscheidung zwischen interner Sicht und öffentlicher Gast-Sicht
+        if(moduleName === 'guestbook' || moduleName === 'guestbook_public') {
+            const isPublic = (moduleName === 'guestbook_public');
+            container.innerHTML = shell('Gästebuch', 'gb-cont');
+            GuestbookModule.init('gb-cont', isPublic);
+        }
+        else if(moduleName === 'finance') { container.innerHTML = shell('Finanzen', 'fin-cont'); FinanceModule.init('fin-cont'); }
         else if(moduleName === 'todo') { container.innerHTML = shell('To-Dos', 'task-cont'); TasksModule.init('todo', 'task-cont'); }
         else if(moduleName === 'cleaning') { container.innerHTML = shell('Putzplan', 'task-cont'); TasksModule.init('cleaning', 'task-cont'); }
         else if(moduleName === 'shopping') { container.innerHTML = shell('Einkauf', 'shop-cont'); ShoppingModule.init('shop-cont'); }
@@ -100,11 +122,16 @@ const App = {
         else if(moduleName === 'ranking') { container.innerHTML = shell('Ranking', 'rank-cont'); TasksModule.initRanking('rank-cont'); }
         else if(moduleName === 'soda') { container.innerHTML = shell('SodaStream', 'soda-cont'); SodaModule.init('soda-cont'); }
         else if(moduleName === 'train') { container.innerHTML = shell('Bahn', 'train-cont'); TrainModule.init('train-cont'); }
-        else if(moduleName === 'guestbook') { container.innerHTML = shell('Gästebuch', 'gb-cont'); GuestbookModule.init('gb-cont', false); }
     },
 
-    toggleSettings() { document.getElementById('settings-modal').style.display = 'flex'; },
-    logout() { localStorage.removeItem('wg_user'); location.reload(); }
+    toggleSettings() {
+        document.getElementById('settings-modal').style.display = 'flex';
+    },
+
+    logout() {
+        localStorage.removeItem('wg_user');
+        location.reload();
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => App.init());
