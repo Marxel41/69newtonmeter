@@ -20,22 +20,30 @@
     </header>
 
     <main id="app-container" style="padding-top: 20px;">
+        <!-- Login Screen -->
         <div id="login-screen">
             <h2>Willkommen</h2>
             <input type="text" id="login-name" placeholder="Name">
             <input type="password" id="login-pin" placeholder="PIN" inputmode="numeric">
+            
             <button id="login-btn" class="primary">Starten</button>
             <p id="login-msg" style="color: var(--danger);"></p>
+            
+            <!-- GAST BUTTON SEKTION -->
+            <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 20px; width: 100%; text-align: center;">
+                <p style="color:#666; font-size:0.8rem; margin-bottom:10px;">Nur zu Besuch?</p>
+                <button id="guest-btn" style="background:transparent; border:1px solid #555; color:#aaa; padding:10px 20px; border-radius:20px; cursor:pointer; width: auto; font-size: 0.9rem;">
+                    📖 Zum Gästebuch
+                </button>
+            </div>
         </div>
     </main>
 
-    <!-- SETTINGS MODAL -->
+    <!-- MODALS -->
     <div id="settings-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('settings-modal').style.display='none'">&times;</button>
             <h3>Einstellungen</h3>
-            
-            <!-- NEU: TEST PUSH BUTTON -->
             <div style="margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:20px;">
                 <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Benachrichtigungen testen:</p>
                 <button onclick="window.App.testPush()" style="background:transparent; border:1px solid var(--secondary); color:var(--secondary); padding:8px; width:100%; border-radius:8px; cursor:pointer;">
@@ -43,16 +51,40 @@
                 </button>
                 <small id="test-status" style="display:block; margin-top:5px; font-size:0.7rem; color:#888;"></small>
             </div>
-
             <button onclick="window.App.logout()" style="background:#333; color:white; padding:10px; border:none; width:100%; margin-top:20px; border-radius:8px;">Abmelden</button>
         </div>
     </div>
 
-    <!-- Andere Modals (Events, Ranking, Finance, etc.) hier weggelassen für Kürze -->
+    <!-- Container für dynamische Modals -->
     <div id="edit-modal" class="modal" style="display:none;"></div>
-    <div id="event-modal" class="modal" style="display:none;"></div>
-    <div id="day-modal" class="modal" style="display:none;"></div>
-    <div id="ranking-modal" class="modal" style="display:none;"></div>
+    <div id="event-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('event-modal').style.display='none'">&times;</button>
+            <h3>Neuer Termin</h3>
+            <input type="text" id="evt-title" placeholder="Titel">
+            <input type="date" id="evt-date">
+            <select id="evt-type">
+                <option value="general">Allgemein</option>
+                <option value="party">Party</option>
+                <option value="garbage">Müll</option>
+            </select>
+            <button class="primary" onclick="CalendarModule.saveEvent()">Speichern</button>
+        </div>
+    </div>
+    <div id="day-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('day-modal').style.display='none'">&times;</button>
+            <h3 id="day-modal-title">Details</h3>
+            <div id="day-modal-list"></div>
+        </div>
+    </div>
+    <div id="ranking-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('ranking-modal').style.display='none'">&times;</button>
+            <h3 id="ranking-modal-user">Historie</h3>
+            <div id="ranking-modal-list"></div>
+        </div>
+    </div>
     <div id="finance-modal" class="modal" style="display:none;"></div>
 
     <script src="js/api.js?v=21"></script>
