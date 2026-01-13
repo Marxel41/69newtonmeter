@@ -1,4 +1,4 @@
-/* VERSION: 16.0 - EDIT MODAL FIX */
+/* VERSION: 17.0 - GUEST BUTTON & UI POLISH */
 
 /* CORE APP STYLES */
 :root {
@@ -39,7 +39,7 @@ header {
 #user-info { font-size: 0.9rem; color: var(--text-muted); }
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 5px; }
 
-/* Login Screen */
+/* Login Screen & Guest Section */
 #login-screen {
     display: flex;
     flex-direction: column;
@@ -52,7 +52,50 @@ header {
     min-height: 100vh;
     pointer-events: auto !important; 
 }
-#login-btn, #guest-btn { pointer-events: auto !important; cursor: pointer !important; position: relative; z-index: 5001; }
+
+/* Spezifisches Styling für den Gast-Bereich am Ende des Logins */
+.guest-access-section {
+    margin-top: 50px;
+    border-top: 1px solid #333;
+    padding-top: 25px;
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
+}
+
+.guest-access-section p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+}
+
+#guest-btn {
+    background: transparent;
+    border: 1px solid #555;
+    color: #aaa;
+    padding: 12px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 5001;
+}
+
+#guest-btn:hover {
+    border-color: var(--text-muted);
+    color: var(--text-main);
+    background: rgba(255,255,255,0.05);
+}
+
+#login-btn { 
+    pointer-events: auto !important; 
+    cursor: pointer !important; 
+    position: relative; 
+    z-index: 5001; 
+}
 
 /* Dashboard */
 .dashboard-grid {
@@ -122,34 +165,18 @@ header {
 .check-btn { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--secondary); background: transparent; color: var(--secondary); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .check-btn.confirm-wait { border-color: var(--warn); color: var(--warn); background: rgba(255, 202, 40, 0.1); transform: scale(1.1); }
 
-/* --- ICON BUTTON FIX (Bearbeiten) --- */
-.icon-btn-small {
-    background: transparent;
-    border: none;
-    font-size: 1.1rem;
-    cursor: pointer !important;
-    color: var(--text-muted);
-    padding: 8px; /* Größerer Klickbereich */
-    border-radius: 50%;
-    transition: background 0.2s;
-    position: relative;
-    z-index: 10; /* Damit er über dem List-Item liegt */
-    pointer-events: auto !important; /* Klick erzwingen */
-}
-.icon-btn-small:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
-
-/* --- MODAL FIX (Über alles) --- */
+/* Modals */
 .modal { 
     position: fixed; 
     top: 0; 
     left: 0; 
     width: 100%; 
     height: 100%; 
-    background: rgba(0,0,0,0.95); /* Dunklerer Hintergrund */
+    background: rgba(0,0,0,0.95);
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    z-index: 10000; /* SEHR HOCH */
+    z-index: 10000;
 }
 .modal-content { background: var(--card-bg); padding: 30px 20px 20px 20px; border-radius: 12px; width: 85%; max-width: 350px; position: relative; max-height: 80vh; overflow-y: auto; }
 .close-modal-x { position: absolute; top: 5px; right: 10px; font-size: 2rem; color: #666; cursor: pointer; border: none; background: none; z-index: 2001; }
@@ -164,16 +191,4 @@ button.primary { background: var(--primary); color: black; font-weight: bold; bo
 
 /* GÄSTEBUCH STYLES */
 .gb-wrapper { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; padding: 20px; line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; align-items: center; margin: -15px; padding-top: 60px; }
-.gb-wrapper h1 { text-align: center; color: #fff; margin-bottom: 5px; font-weight: 600; }
-.gb-wrapper p.subtitle { text-align: center; color: #e0e0e0; margin-bottom: 35px; margin-top: 0; font-weight: 300; }
-.gb-form-container { width: 90%; max-width: 500px; background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); backdrop-filter: blur(10px); box-sizing: border-box; }
-.gb-wrapper .form-row { margin-bottom: 25px; }
-.gb-wrapper label { display: block; font-weight: 600; margin-bottom: 8px; color: #4a5568; font-size: 0.95rem; }
-.gb-wrapper input[type="text"], .gb-wrapper textarea, .gb-wrapper select { width: 100%; padding: 14px; border: 2px solid transparent !important; border-radius: 12px; box-sizing: border-box; font-size: 1rem; background: #f7fafc !important; color: #2d3748 !important; font-family: inherit; margin-bottom: 0; }
-.gb-wrapper input:focus, .gb-wrapper select:focus, .gb-wrapper textarea:focus { border-color: #667eea !important; background: #fff !important; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-.gb-wrapper button.gb-btn { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s; margin-top: 10px; }
-.range-labels { display:flex; justify-content:space-between; font-size:0.8rem; color:#a0aec0; margin-top: 8px; font-weight: 500; }
-.emoji-feedback { font-size: 1.8rem; vertical-align: middle; margin-left: 10px; display: inline-block; }
 .gb-entry-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 4px solid #667eea; color: #4a5568; text-align: left; width: 100%; }
-.gb-entry-header { display: flex; justify-content: space-between; font-weight: bold; color: #2d3748; margin-bottom: 5px; }
-.gb-entry-meta { font-size: 0.8rem; color: #a0aec0; margin-top: 5px; }
