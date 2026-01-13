@@ -4,20 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
-    <!-- CSS mit Cache-Buster laden -->
-    <link rel="stylesheet" href="style.css?v=22">
+    <!-- CSS mit Cache-Buster v23 -->
+    <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
     <header>
         <div style="display:flex; align-items:center; gap:5px;">
-             <!-- ZURÜCK BUTTON -->
-             <button id="nav-back-btn" class="icon-btn" style="display:none; font-size:1.4rem; font-weight:bold; color:var(--primary); padding-right:15px;" onclick="window.App.showDashboard()">
-                ❮
-             </button>
+             <button id="nav-back-btn" class="icon-btn" style="display:none; font-size:1.4rem; font-weight:bold; color:var(--primary); padding-right:15px;" onclick="window.App.showDashboard()">❮</button>
              <h1 id="app-title" style="margin:0; font-size:1.2rem;">WG Hub</h1>
         </div>
-        
         <div class="header-actions">
             <div id="user-info"></div>
             <button class="icon-btn" onclick="window.App.toggleSettings()" id="settings-btn" style="display:none;">⚙️</button>
@@ -25,91 +21,55 @@
     </header>
 
     <main id="app-container" style="padding-top: 20px;">
-        <!-- LOGIN SCREEN -->
+        <!-- Login Screen -->
         <div id="login-screen">
-            <h2 style="margin-bottom: 20px;">Willkommen</h2>
-            
-            <div style="width: 100%; max-width: 300px;">
+            <div style="width: 100%; max-width: 300px; text-align: center;">
+                <h2>Willkommen</h2>
                 <input type="text" id="login-name" placeholder="Name">
                 <input type="password" id="login-pin" placeholder="PIN" inputmode="numeric">
                 <button id="login-btn" class="primary">Starten</button>
-                <p id="login-msg" style="color: var(--danger); text-align: center; margin-top: 10px; min-height: 1.2rem;"></p>
+                <p id="login-msg" style="color: var(--danger); margin-top: 10px;"></p>
             </div>
             
-            <!-- HIER IST DER GAST-BUTTON BEREICH -->
-            <div style="margin-top: 50px; border-top: 1px solid #333; padding-top: 25px; width: 100%; max-width: 300px; text-align: center;">
-                <p style="color:#666; font-size:0.85rem; margin-bottom:15px;">Nur zu Besuch?</p>
-                <button id="guest-btn" style="background:transparent; border:1px solid #555; color:#aaa; padding:12px 20px; border-radius:25px; cursor:pointer; width: 100%; font-size: 0.95rem; transition: all 0.2s;">
-                    📖 Zum Gästebuch
-                </button>
+            <!-- GAST BEREICH -->
+            <div class="guest-access-section">
+                <p>Nur zu Besuch?</p>
+                <button id="guest-btn">📖 Zum Gästebuch</button>
             </div>
         </div>
     </main>
 
-    <!-- SETTINGS MODAL -->
+    <!-- Modals (Settings, Edit, Event, Day, Ranking, Finance) -->
     <div id="settings-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <button class="close-modal-x" onclick="document.getElementById('settings-modal').style.display='none'">&times;</button>
             <h3>Einstellungen</h3>
-            
             <div style="margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:20px;">
                 <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Benachrichtigungen testen:</p>
-                <button onclick="window.App.testPush()" style="background:transparent; border:1px solid var(--secondary); color:var(--secondary); padding:8px; width:100%; border-radius:8px; cursor:pointer;">
-                    🔔 Test-Push senden
-                </button>
+                <button onclick="window.App.testPush()" style="background:transparent; border:1px solid var(--secondary); color:var(--secondary); padding:8px; width:100%; border-radius:8px; cursor:pointer;">🔔 Test-Push senden</button>
                 <small id="test-status" style="display:block; margin-top:5px; font-size:0.7rem; color:#888;"></small>
             </div>
-
             <button onclick="window.App.logout()" style="background:#333; color:white; padding:10px; border:none; width:100%; margin-top:20px; border-radius:8px;">Abmelden</button>
         </div>
     </div>
 
-    <!-- DYNAMISCHE MODALS FÜR MODULE -->
+    <!-- Container für Modals -->
     <div id="edit-modal" class="modal" style="display:none;"></div>
-    
-    <div id="event-modal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <button class="close-modal-x" onclick="document.getElementById('event-modal').style.display='none'">&times;</button>
-            <h3>Neuer Termin</h3>
-            <input type="text" id="evt-title" placeholder="Titel">
-            <input type="date" id="evt-date">
-            <select id="evt-type">
-                <option value="general">Allgemein</option>
-                <option value="party">Party</option>
-                <option value="garbage">Müll</option>
-            </select>
-            <button class="primary" onclick="CalendarModule.saveEvent()">Speichern</button>
-        </div>
-    </div>
-
-    <div id="day-modal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <button class="close-modal-x" onclick="document.getElementById('day-modal').style.display='none'">&times;</button>
-            <h3 id="day-modal-title">Details</h3>
-            <div id="day-modal-list" style="max-height: 300px; overflow-y: auto;"></div>
-        </div>
-    </div>
-
-    <div id="ranking-modal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <button class="close-modal-x" onclick="document.getElementById('ranking-modal').style.display='none'">&times;</button>
-            <h3 id="ranking-modal-user">Historie</h3>
-            <div id="ranking-modal-list" style="max-height: 300px; overflow-y: auto;"></div>
-        </div>
-    </div>
-
+    <div id="event-modal" class="modal" style="display:none;"></div>
+    <div id="day-modal" class="modal" style="display:none;"></div>
+    <div id="ranking-modal" class="modal" style="display:none;"></div>
     <div id="finance-modal" class="modal" style="display:none;"></div>
 
-    <!-- SKRIPTE MIT CACHE BUSTER -->
-    <script src="js/api.js?v=22"></script>
-    <script src="js/modules/calendar.js?v=22"></script>
-    <script src="js/modules/shopping.js?v=22"></script>
-    <script src="js/modules/tasks.js?v=22"></script>
-    <script src="js/modules/voting.js?v=22"></script>
-    <script src="js/modules/sodastream.js?v=22"></script>
-    <script src="js/modules/guestbook.js?v=22"></script>
-    <script src="js/modules/train.js?v=22"></script>
-    <script src="js/modules/finance.js?v=22"></script>
-    <script src="js/main.js?v=22"></script>
+    <!-- Skripte mit Cache-Buster v23 -->
+    <script src="js/api.js?v=23"></script>
+    <script src="js/modules/calendar.js?v=23"></script>
+    <script src="js/modules/shopping.js?v=23"></script>
+    <script src="js/modules/tasks.js?v=23"></script>
+    <script src="js/modules/voting.js?v=23"></script>
+    <script src="js/modules/sodastream.js?v=23"></script>
+    <script src="js/modules/guestbook.js?v=23"></script>
+    <script src="js/modules/train.js?v=23"></script>
+    <script src="js/modules/finance.js?v=23"></script>
+    <script src="js/main.js?v=23"></script>
 </body>
 </html>
