@@ -1,4 +1,4 @@
-/* VERSION: 17.1 - LOGIN & GUEST BUTTON LAYOUT FIX */
+/* VERSION: 18.0 - FULL COMBINED DESIGN */
 
 :root {
     --bg-color: #121212;
@@ -20,6 +20,7 @@ body {
     padding-bottom: 50px; 
 }
 
+/* --- HEADER --- */
 header {
     background: #1f1f1f;
     padding: 0 15px;
@@ -37,26 +38,31 @@ header {
 #user-info { font-size: 0.9rem; color: var(--text-muted); }
 .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 5px; }
 
-/* Login Screen Fix */
+/* --- LOGIN & GUEST SECTION --- */
 #login-screen {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center; /* Zentriert den Inhalt */
+    justify-content: center;
     padding: 20px;
     background-color: var(--bg-color);
-    /* Kein min-height: 100vh mehr, da es sonst den Button runterschiebt */
     min-height: calc(100vh - 80px); 
     box-sizing: border-box;
 }
 
 .guest-access-section {
-    margin-top: 30px; /* Etwas weniger Abstand für bessere Sichtbarkeit */
+    margin-top: 40px;
     border-top: 1px solid #333;
-    padding-top: 20px;
+    padding-top: 25px;
     width: 100%;
     max-width: 300px;
     text-align: center;
+}
+
+.guest-access-section p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 15px;
 }
 
 #guest-btn {
@@ -71,21 +77,239 @@ header {
     transition: all 0.2s;
 }
 
-#guest-btn:active {
-    background: rgba(255,255,255,0.1);
-    transform: scale(0.98);
+/* --- DASHBOARD --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 15px;
 }
 
-/* Restliche Styles wie gehabt... */
-.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
-.tile { background: var(--card-bg); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1/1; cursor: pointer; text-align: center; }
+.tile {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1/1;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.1s;
+}
+
+.tile:active { transform: scale(0.95); background: #2a2a2a; }
 .tile span { font-size: 2rem; margin-bottom: 5px; }
 .tile h3 { margin: 0; font-size: 0.9rem; font-weight: 500; }
 .tile.wide { grid-column: span 2; aspect-ratio: auto; flex-direction: row; justify-content: space-between; padding: 20px; }
 
-.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; z-index: 10000; }
-.modal-content { background: var(--card-bg); padding: 30px 20px 20px 20px; border-radius: 12px; width: 85%; max-width: 350px; position: relative; max-height: 80vh; overflow-y: auto; }
-.close-modal-x { position: absolute; top: 5px; right: 10px; font-size: 2rem; color: #666; cursor: pointer; border: none; background: none; }
+/* --- TASKS & LIST ITEMS --- */
+.list-item {
+    background: #252525;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 
-input, select { background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-button.primary { background: var(--primary); color: black; font-weight: bold; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; }
+.task-assigned-me { border-left: 4px solid var(--secondary); background: rgba(3, 218, 198, 0.05); }
+.task-assigned-other { border-left: 4px solid var(--danger); opacity: 0.7; background: rgba(207, 102, 121, 0.05); }
+
+.check-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--secondary);
+    background: transparent;
+    color: var(--secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.check-btn.confirm-wait {
+    border-color: var(--warn);
+    color: var(--warn);
+    background: rgba(255, 202, 40, 0.1);
+    transform: scale(1.1);
+}
+
+/* --- KALENDER --- */
+.cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #333;
+}
+
+.cal-header button {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.cal-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 4px;
+    padding: 10px;
+}
+
+.day-name {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.cal-day {
+    aspect-ratio: 1/1;
+    text-align: center;
+    padding: 5px;
+    position: relative;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: #252525;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.cal-day.today {
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.dots {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+    height: 6px;
+}
+
+.dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+/* --- SODASTREAM --- */
+.soda-counter {
+    font-size: 4.5rem;
+    font-weight: bold;
+    margin: 20px 0;
+    color: var(--secondary);
+    text-shadow: 0 0 15px rgba(3, 218, 198, 0.3);
+}
+
+.soda-controls {
+    display: flex;
+    gap: 25px;
+    justify-content: center;
+}
+
+.soda-btn {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    font-size: 2rem;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s;
+}
+
+.soda-btn:active { transform: scale(0.9); }
+.btn-inc { background: var(--secondary); color: black; }
+.btn-dec { background: #333; color: white; border: 1px solid #444; }
+
+/* --- VOTING --- */
+.vote-card { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #555; }
+.vote-card.status-yes { border-left-color: var(--secondary); }
+.vote-card.status-no { border-left-color: var(--danger); }
+.vote-card.status-veto { border-left-color: var(--veto); border: 1px solid var(--veto); }
+
+.vote-bars { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 12px 0; background: #333; }
+.bar-yes { background: var(--secondary); height: 100%; }
+.bar-no { background: var(--danger); height: 100%; }
+
+/* --- MODALS --- */
+.modal { 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.9);
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 10000;
+}
+
+.modal-content { 
+    background: var(--card-bg); 
+    padding: 30px 20px 20px 20px; 
+    border-radius: 16px; 
+    width: 85%; 
+    max-width: 380px; 
+    position: relative; 
+    max-height: 85vh; 
+    overflow-y: auto; 
+    border: 1px solid #333;
+}
+
+.close-modal-x { position: absolute; top: 10px; right: 15px; font-size: 2rem; color: #888; cursor: pointer; border: none; background: none; }
+
+input, select, textarea { 
+    background: #2c2c2c; 
+    border: 1px solid #444; 
+    color: white; 
+    padding: 12px; 
+    border-radius: 10px; 
+    width: 100%; 
+    margin-bottom: 12px; 
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+button.primary { 
+    background: var(--primary); 
+    color: black; 
+    font-weight: bold; 
+    border: none; 
+    padding: 14px; 
+    border-radius: 10px; 
+    width: 100%; 
+    cursor: pointer; 
+    font-size: 1rem;
+}
+
+/* --- GÄSTEBUCH --- */
+.gb-entry-card { 
+    background: white; 
+    padding: 15px; 
+    border-radius: 12px; 
+    margin-bottom: 15px; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+    border-left: 4px solid var(--primary); 
+    color: #333; 
+}
