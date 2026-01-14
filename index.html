@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WG Hub</title>
-    <!-- CSS mit Cache-Buster v23 -->
-    <link rel="stylesheet" href="style.css?v=23">
+    <!-- CSS mit Cache-Buster v24 -->
+    <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -31,7 +31,6 @@
                 <p id="login-msg" style="color: var(--danger); margin-top: 10px;"></p>
             </div>
             
-            <!-- GAST BEREICH -->
             <div class="guest-access-section">
                 <p>Nur zu Besuch?</p>
                 <button id="guest-btn">📖 Zum Gästebuch</button>
@@ -55,21 +54,45 @@
 
     <!-- Container für Modals -->
     <div id="edit-modal" class="modal" style="display:none;"></div>
-    <div id="event-modal" class="modal" style="display:none;"></div>
-    <div id="day-modal" class="modal" style="display:none;"></div>
-    <div id="ranking-modal" class="modal" style="display:none;"></div>
+    <div id="event-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('event-modal').style.display='none'">&times;</button>
+            <h3>Neuer Termin</h3>
+            <input type="text" id="evt-title" placeholder="Titel">
+            <input type="date" id="evt-date">
+            <select id="evt-type">
+                <option value="general">Allgemein</option>
+                <option value="party">Party</option>
+                <option value="garbage">Müll</option>
+            </select>
+            <button class="primary" onclick="CalendarModule.saveEvent()">Speichern</button>
+        </div>
+    </div>
+    <div id="day-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('day-modal').style.display='none'">&times;</button>
+            <h3 id="day-modal-title">Details</h3>
+            <div id="day-modal-list"></div>
+        </div>
+    </div>
+    <div id="ranking-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="document.getElementById('ranking-modal').style.display='none'">&times;</button>
+            <h3 id="ranking-modal-user">Historie</h3>
+            <div id="ranking-modal-list"></div>
+        </div>
+    </div>
     <div id="finance-modal" class="modal" style="display:none;"></div>
 
-    <!-- Skripte mit Cache-Buster v23 -->
-    <script src="js/api.js?v=23"></script>
-    <script src="js/modules/calendar.js?v=23"></script>
-    <script src="js/modules/shopping.js?v=23"></script>
-    <script src="js/modules/tasks.js?v=23"></script>
-    <script src="js/modules/voting.js?v=23"></script>
-    <script src="js/modules/sodastream.js?v=23"></script>
-    <script src="js/modules/guestbook.js?v=23"></script>
-    <script src="js/modules/train.js?v=23"></script>
-    <script src="js/modules/finance.js?v=23"></script>
-    <script src="js/main.js?v=23"></script>
+    <script src="js/api.js?v=24"></script>
+    <script src="js/modules/calendar.js?v=24"></script>
+    <script src="js/modules/shopping.js?v=24"></script>
+    <script src="js/modules/tasks.js?v=24"></script>
+    <script src="js/modules/voting.js?v=24"></script>
+    <script src="js/modules/sodastream.js?v=24"></script>
+    <script src="js/modules/guestbook.js?v=24"></script>
+    <script src="js/modules/train.js?v=24"></script>
+    <script src="js/modules/finance.js?v=24"></script>
+    <script src="js/main.js?v=24"></script>
 </body>
 </html>
