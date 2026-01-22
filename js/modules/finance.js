@@ -4,13 +4,13 @@ const FinanceModule = {
     balances: {}, 
     
     // ==========================================
-    // 🔧 HARDCODED FIXKOSTEN (HIER ÄNDERN!)
+    // 🔧 HARDCODED FIXKOSTEN
     // ==========================================
     fixedCosts: {
-        rent: 1200,       // Miete (Gesamt)
-        utilities: 300,  // Nebenkosten
-        internet: 19,   // Internet
-        power: 82       // Strom
+        rent: 1200,
+        utilities: 300,
+        internet: 19,
+        power: 82
     },
     // ==========================================
 
@@ -22,7 +22,6 @@ const FinanceModule = {
         const container = document.getElementById(cId);
         if(!container) return;
         
-        // Check: Gibt es lokale Änderungen?
         const savedFixed = localStorage.getItem('wg_finance_fixed');
         if(savedFixed) {
             try { this.fixedCosts = JSON.parse(savedFixed); } catch(e){}
@@ -31,8 +30,6 @@ const FinanceModule = {
         this.renderShell();
         await this.load();
 
-        // --- EVENT DELEGATION FÜR DEN VERLAUF ---
-        // Wir fangen Klicks auf dem Haupt-Container ab
         container.addEventListener('click', (e) => {
             const item = e.target.closest('.finance-item-clickable');
             if (item) {
@@ -80,7 +77,6 @@ const FinanceModule = {
         }
     },
 
-    // --- VIEW 1: SPLITWISE ---
     renderSplitView() {
         const container = document.getElementById('finance-content');
         if(!container) return;
@@ -105,7 +101,6 @@ const FinanceModule = {
         this.renderHistory();
     },
 
-    // --- VIEW 2: MONATSÜBERSICHT ---
     renderStatsView() {
         const container = document.getElementById('finance-content');
         if(!container) return;
@@ -124,8 +119,22 @@ const FinanceModule = {
                 const date = new Date(t.date);
                 const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                 
-                if (!monthlyData[key]) monthlyData[key] = 0;
-                monthlyData[key] += parseFloat(t.amount);
+                if (!monthlyData[key]) {
+                    monthlyData[key] = {
+                        totalVar: 0,
+                        categories: {
+                            'Einkauf': 0,
+                            'Neubeschaffung': 0,
+                            'Sonstiges': 0
+                        }
+                    };
+                }
+                const amount = parseFloat(t.amount) || 0;
+                const cat = t.category || 'Sonstiges';
+                
+                monthlyData[key].totalVar += amount;
+                if (!monthlyData[key].categories[cat]) monthlyData[key].categories[cat] = 0;
+                monthlyData[key].categories[cat] += amount;
             }
         });
 
@@ -138,9 +147,9 @@ const FinanceModule = {
         }
 
         sortedMonths.forEach(monthKey => {
-            const variableCosts = monthlyData[monthKey];
+            const data = monthlyData[monthKey];
             const fixedSum = this.fixedCosts.rent + this.fixedCosts.utilities + this.fixedCosts.internet + this.fixedCosts.power;
-            const total = variableCosts + fixedSum;
+            const total = data.totalVar + fixedSum;
             
             const [y, m] = monthKey.split('-');
             const monthName = new Date(y, m - 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
@@ -152,7 +161,7 @@ const FinanceModule = {
                         <span style="font-weight:bold;">${total.toFixed(2)} €</span>
                     </div>
                     <div id="details-${monthKey}" style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:15px;">
-                        ${this.generatePieChartHTML(variableCosts)}
+                        ${this.generatePieChartHTML(data.categories)}
                     </div>
                 </div>
             `;
@@ -164,33 +173,35 @@ const FinanceModule = {
         if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
     },
 
-    generatePieChartHTML(variableCosts) {
+    generatePieChartHTML(variableCategories) {
         const data = [
             { label: 'Miete', value: this.fixedCosts.rent, color: '#FF6384' },
-            { label: 'Nebenk', value: this.fixedCosts.utilities, color: '#36A2EB' },
+            { label: 'Nebenk.', value: this.fixedCosts.utilities, color: '#36A2EB' },
             { label: 'Netz', value: this.fixedCosts.internet, color: '#FFCE56' },
             { label: 'Strom', value: this.fixedCosts.power, color: '#4BC0C0' },
-            { label: 'Sonstiges', value: variableCosts, color: '#9966FF' }
+            { label: 'Einkauf', value: variableCategories['Einkauf'] || 0, color: '#9966FF' },
+            { label: 'Neubeschaff.', value: variableCategories['Neubeschaffung'] || 0, color: '#44CD81' },
+            { label: 'Sonstiges', value: variableCategories['Sonstiges'] || 0, color: '#C9CBCF' }
         ];
 
         const total = data.reduce((sum, item) => sum + item.value, 0);
         if (total === 0) return "Keine Daten";
 
         let currentDeg = 0;
-        const gradientParts = data.map(item => {
+        const gradientParts = data.filter(i => i.value > 0).map(item => {
             const deg = (item.value / total) * 360;
             const part = `${item.color} ${currentDeg}deg ${currentDeg + deg}deg`;
             currentDeg += deg;
             return part;
         });
 
-        const legendHtml = data.map(item => `
+        const legendHtml = data.filter(i => i.value > 0).map(item => `
             <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
                 <span style="display:flex; align-items:center;">
                     <span style="width:8px; height:8px; background:${item.color}; display:inline-block; margin-right:5px; border-radius:2px;"></span>
                     ${item.label}
                 </span>
-                <span>${item.value.toFixed(0)} €</span>
+                <span>${item.value.toFixed(2)} €</span>
             </div>
         `).join('');
 
@@ -309,9 +320,9 @@ const FinanceModule = {
             let dateStr = "";
             try { dateStr = new Date(t.date).toLocaleDateString(); } catch(e){}
 
-            let details = isExpense ? `bezahlt von <strong>${t.payer}</strong>` : `<strong>${t.payer}</strong> ➔ <strong>${t.recipient}</strong>`;
+            const categoryBadge = t.category ? `<span style="font-size:0.7rem; background:#333; padding:2px 6px; border-radius:4px; margin-left:5px;">${t.category}</span>` : '';
+            let details = isExpense ? `bezahlt von <strong>${t.payer}</strong> ${categoryBadge}` : `<strong>${t.payer}</strong> ➔ <strong>${t.recipient}</strong>`;
 
-            // FIX: Klasse 'finance-item-clickable' und 'data-id' für Event Delegation
             list.innerHTML += `
                 <div class="list-item finance-item-clickable" data-id="${t.id}" style="cursor:pointer;">
                     <div style="display:flex; align-items:center; gap:10px; pointer-events:none;">
@@ -329,9 +340,7 @@ const FinanceModule = {
         });
     },
 
-    // --- BEARBEITEN LOGIK ---
     openEdit(id) {
-        // ID Typ-tolerant vergleichen
         const t = this.transactions.find(trans => trans.id == id);
         if(!t) return;
 
@@ -345,8 +354,16 @@ const FinanceModule = {
                     <button class="close-modal-x">&times;</button>
                     <h3>Bearbeiten</h3>
                     <div style="margin-bottom:15px;">
-                        <label id="lbl-edit-title" style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Titel</label>
+                        <label id="lbl-edit-title" style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Beschreibung</label>
                         <input type="text" id="js-edit-title" style="width:100%;">
+                    </div>
+                    <div style="margin-bottom:15px;" id="js-edit-cat-wrap">
+                        <label style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Kategorie</label>
+                        <select id="js-edit-category">
+                            <option value="Einkauf">Einkauf</option>
+                            <option value="Neubeschaffung">Neubeschaffung</option>
+                            <option value="Sonstiges">Sonstiges</option>
+                        </select>
                     </div>
                     <div id="js-edit-points-wrap" style="margin-bottom:15px;">
                         <label id="lbl-edit-points" style="display:block; font-size:0.8rem; color:#888; margin-bottom:5px;">Betrag (€)</label>
@@ -358,10 +375,16 @@ const FinanceModule = {
             modal.querySelector('.close-modal-x').onclick = () => modal.style.display = 'none';
         }
 
-        // Labels für Finanzen anpassen
-        document.getElementById('lbl-edit-title').innerText = "Beschreibung";
         document.getElementById('js-edit-title').value = t.description;
         document.getElementById('js-edit-points').value = t.amount;
+        
+        const catWrap = document.getElementById('js-edit-cat-wrap');
+        if (t.type === 'expense') {
+            catWrap.style.display = 'block';
+            document.getElementById('js-edit-category').value = t.category || 'Sonstiges';
+        } else {
+            catWrap.style.display = 'none';
+        }
 
         const saveBtn = document.getElementById('js-edit-save');
         const newBtn = saveBtn.cloneNode(true);
@@ -375,24 +398,26 @@ const FinanceModule = {
     async saveEdit(id) {
         const newDesc = document.getElementById('js-edit-title').value;
         const newAmount = document.getElementById('js-edit-points').value;
+        const newCat = document.getElementById('js-edit-category').value;
 
         if(!newDesc || !newAmount) return;
 
         document.getElementById('js-edit-modal').style.display = 'none';
 
-        // Optimistic UI Update
         const t = this.transactions.find(trans => trans.id == id);
         if(t) {
             t.description = newDesc;
             t.amount = newAmount;
+            if (t.type === 'expense') t.category = newCat;
             this.calculateDebts();
             if (this.currentView === 'split') this.renderHistory();
+            else this.renderStatsView();
         }
 
         await API.post('update', { 
             sheet: 'Finance', 
             id: id, 
-            updates: JSON.stringify({ description: newDesc, amount: newAmount }) 
+            updates: JSON.stringify({ description: newDesc, amount: newAmount, category: newCat }) 
         });
         
         await this.load();
@@ -405,8 +430,20 @@ const FinanceModule = {
             <div class="modal-content">
                 <button class="close-modal-x" onclick="document.getElementById('finance-modal').style.display='none'">&times;</button>
                 <h3>Ausgabe hinzufügen</h3>
-                <input type="number" id="fin-amount" placeholder="Betrag (z.B. 12.50)" step="0.01">
-                <input type="text" id="fin-desc" placeholder="Wofür? (z.B. Pizza)">
+                
+                <label style="font-size:0.8rem; color:#888;">Betrag</label>
+                <input type="number" id="fin-amount" placeholder="z.B. 12.50" step="0.01">
+                
+                <label style="font-size:0.8rem; color:#888;">Kategorie</label>
+                <select id="fin-category">
+                    <option value="Einkauf">Einkauf</option>
+                    <option value="Neubeschaffung">Neubeschaffung</option>
+                    <option value="Sonstiges" selected>Sonstiges</option>
+                </select>
+
+                <label style="font-size:0.8rem; color:#888;">Beschreibung</label>
+                <input type="text" id="fin-desc" placeholder="z.B. Pizza">
+                
                 <button class="primary" onclick="window.FinanceModule.saveTransaction('expense')">Speichern</button>
             </div>`;
         modal.style.display = 'flex';
@@ -465,6 +502,7 @@ const FinanceModule = {
     async saveTransaction(type) {
         const amount = document.getElementById('fin-amount').value;
         const desc = document.getElementById('fin-desc').value;
+        const category = document.getElementById('fin-category') ? document.getElementById('fin-category').value : '';
         const recipient = type === 'payment' ? document.getElementById('fin-recipient').value : '';
 
         if (!amount || !desc) { alert("Bitte Betrag eingeben"); return; }
@@ -477,6 +515,7 @@ const FinanceModule = {
             payer: App.user.name,
             amount: amount,
             description: desc,
+            category: category,
             recipient: recipient
         };
 
