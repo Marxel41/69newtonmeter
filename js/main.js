@@ -16,14 +16,12 @@ const App = {
     init() {
         window.App = this; 
         
-        // Event Listener für Login
         const loginBtn = document.getElementById('login-btn');
         if(loginBtn) loginBtn.addEventListener('click', () => this.login());
 
-        // Event Listener für Gast-Zugang
         const guestBtn = document.getElementById('guest-btn');
         if(guestBtn) guestBtn.addEventListener('click', () => {
-            this.user = { name: "Gast", role: "guest" }; // Temporärer Gast-Status
+            this.user = { name: "Gast", role: "guest" }; 
             this.loadModule('guestbook_public');
         });
         
@@ -31,7 +29,12 @@ const App = {
         if (savedUser) {
             try { 
                 this.user = JSON.parse(savedUser); 
-                this.showDashboard(); 
+                // Gäste werden beim Neuladen nicht automatisch eingeloggt
+                if(this.user.role === 'guest') {
+                    this.logout();
+                } else {
+                    this.showDashboard(); 
+                }
             } catch (e) { 
                 localStorage.removeItem('wg_user'); 
             }
@@ -53,29 +56,27 @@ const App = {
         }
     },
 
-    async testPush() {
-        const statusEl = document.getElementById('test-status');
-        statusEl.innerText = "Sende...";
-        statusEl.style.color = "#888";
-        
-        const result = await API.post('test_push');
-        
-        if (result.status === 'success') {
-            statusEl.innerText = "Gesendet! Prüfe Discord.";
-            statusEl.style.color = "var(--secondary)";
+    // Intelligente Zurück-Funktion
+    goBack() {
+        if (this.user && this.user.role === 'guest') {
+            this.logout(); // Gäste gehen immer zurück zum Login
         } else {
-            statusEl.innerText = "Fehler: " + result.message;
-            statusEl.style.color = "var(--danger)";
+            this.showDashboard(); // Bewohner gehen zum Dashboard
         }
     },
 
     showDashboard() {
-        // UI für eingeloggte User vorbereiten
+        // SICHERHEITS-CHECK: Gäste dürfen das Dashboard nicht sehen
+        if (!this.user || this.user.role === 'guest') {
+            this.logout();
+            return;
+        }
+
         document.getElementById('nav-back-btn').style.display = 'none';
         document.getElementById('settings-btn').style.display = 'block';
         
         const userInfo = document.getElementById('user-info');
-        if (userInfo && this.user) {
+        if (userInfo) {
             userInfo.innerHTML = `Hi, <strong>${this.user.name}</strong>`;
         }
         
@@ -98,6 +99,12 @@ const App = {
     },
 
     loadModule(moduleName) {
+        // SICHERHEITS-CHECK: Gäste dürfen NUR das öffentliche Gästebuch laden
+        if (this.user && this.user.role === 'guest' && moduleName !== 'guestbook_public') {
+            this.logout();
+            return;
+        }
+
         const container = document.getElementById('app-container');
         document.getElementById('nav-back-btn').style.display = 'block';
         document.getElementById('settings-btn').style.display = 'none';
@@ -108,7 +115,6 @@ const App = {
                 <div id="${id}">Lade...</div>
             </div>`;
 
-        // Unterscheidung zwischen interner Sicht und öffentlicher Gast-Sicht
         if(moduleName === 'guestbook' || moduleName === 'guestbook_public') {
             const isPublic = (moduleName === 'guestbook_public');
             container.innerHTML = shell('Gästebuch', 'gb-cont');
@@ -124,11 +130,20 @@ const App = {
         else if(moduleName === 'train') { container.innerHTML = shell('Bahn', 'train-cont'); TrainModule.init('train-cont'); }
     },
 
+    async testPush() {
+        const statusEl = document.getElementById('test-status');
+        if(!statusEl) return;
+        statusEl.innerText = "Sende...";
+        const result = await API.post('test_push');
+        statusEl.innerText = result.status === 'success' ? "Gesendet!" : "Fehler";
+    },
+
     toggleSettings() {
         document.getElementById('settings-modal').style.display = 'flex';
     },
 
     logout() {
+        this.user = null;
         localStorage.removeItem('wg_user');
         location.reload();
     }
